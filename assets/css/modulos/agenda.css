@@ -407,3 +407,34 @@
   .cal-lista__estado { display: none; }
   .cal-cajon { width: 100vw; }
 }
+
+/* ---------- Agenda serena (assets/js/modulos/agenda_menus.js): una sola fila, lo secundario en submenús ---------- */
+body:has(.pagina--agenda) .banner { height: 96px; }
+.calendario--sereno .calendario__seccion, .calendario--sereno .calendario__atajos, .calendario--sereno .calendario__vistas { display: none; }
+.calendario--sereno .calendario__barra { flex-wrap: nowrap; }
+.calendario--sereno .calendario__navegar { flex: 1 1 auto; }
+.calendario--sereno .calendario__herramientas { flex-wrap: nowrap; flex-shrink: 0; gap: 4px; }
+.cal-menu-boton {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px;
+  border: 1px solid #262626; border-radius: 6px; background: none; color: var(--texto);
+  font: inherit; font-size: .875rem; cursor: pointer; position: relative;
+  transition: background var(--transicion), border-color var(--transicion);
+}
+.cal-menu-boton:hover, .cal-menu-boton[aria-expanded="true"] { background: #1c1c1c; border-color: #333; }
+.cal-menu-boton svg.icono { width: 14px; height: 14px; color: #8a8a8a; }
+.cal-menu-boton--icono { width: 32px; padding: 0; justify-content: center; }
+.cal-menu-boton--icono svg.icono { width: 15px; height: 15px; }
+.cal-menu-boton__punto { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--primario); }
+/* Búsqueda: solo la lupa hasta que se usa */
+.calendario--sereno .cal-buscar { width: 32px; padding: 0 0 0 8px; border-color: transparent; background: none; overflow: hidden; }
+.calendario--sereno .cal-buscar input::placeholder { color: transparent; }
+.calendario--sereno .cal-buscar:focus-within, .calendario--sereno .cal-buscar--activa { width: 220px; border-color: #3a3a3a; background: #151515; }
+.calendario--sereno .cal-buscar:focus-within input::placeholder, .calendario--sereno .cal-buscar--activa input::placeholder { color: #7a7a7a; }
+.calendario--sereno .cal-buscar:hover { background: #1a1a1a; }
+/* Citas más legibles: nombre arriba, hora abajo; el día de hoy apenas resaltado */
+.cal-evento { padding: 3px 6px 2px 9px; }
+.cal-evento__titulo { font-weight: 600; }
+.cal-tiempo__columna.es-hoy { background: rgba(35, 131, 226, .035); }
+.cal-evento { line-height: 1.22; }
+.cal-evento--medio { justify-content: center; }
+.cal-evento--medio .cal-evento__motivo, .cal-evento--medio .cal-evento__fin { display: none; }

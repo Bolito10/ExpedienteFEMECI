@@ -1,0 +1,91 @@
+/* ==========================================================================
+   Perfil del paciente a la medida (assets/js/modulos/perfil_paciente.js): barra fina de íconos,
+   buscador, modos de vista, secciones plegables y arrastrables. Ocupa poco y no distrae.
+   ========================================================================== */
+.perfil-barra {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 4px;
+  margin: 18px 0 2px; padding: 5px 4px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #1d1d1d;
+}
+.perfil-barra__enfoques, .perfil-barra__modos { display: flex; align-items: center; gap: 1px; }
+.perfil-barra__enfoques { flex: 0 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.perfil-barra__boton {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 7px; flex-shrink: 0;
+  border: 0; border-radius: 6px; background: none; color: var(--texto-tenue);
+  font: inherit; font-size: var(--fs-xs); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.perfil-barra__boton svg { width: 15px; height: 15px; }
+.perfil-barra__boton:hover { background: #1c1c1c; color: var(--texto); }
+.perfil-barra__boton[aria-checked="true"] { background: #222; color: var(--texto-fuerte); }
+/* Solo el ícono; el nombre aparece en el elegido (y al pasar el ratón por el título del botón) */
+.perfil-barra__texto { display: none; }
+.perfil-barra__enfoques .perfil-barra__boton[aria-checked="true"] .perfil-barra__texto { display: inline; }
+.perfil-barra__buscar {
+  display: flex; align-items: center; gap: 6px; flex: 1 1 140px; max-width: 260px; height: 28px; margin-left: auto; padding: 0 8px;
+  border: 1px solid transparent; border-radius: 6px; color: var(--texto-tenue); transition: border-color 140ms ease, background 140ms ease;
+}
+.perfil-barra__buscar:hover { background: #171717; }
+.perfil-barra__buscar:focus-within { border-color: #2e2e2e; background: #141414; }
+.perfil-barra__buscar svg { width: 14px; height: 14px; flex-shrink: 0; }
+.perfil-barra__buscar input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--texto); font: inherit; font-size: var(--fs-xs); }
+.perfil-barra__buscar input::placeholder { color: var(--texto-tenue); }
+.perfil-barra__separador { width: 1px; height: 16px; margin: 0 4px; background: #262626; flex-shrink: 0; }
+.perfil-aviso { margin: 10px 0 0; font-size: var(--fs-xs); color: var(--texto-tenue); animation: entrada-escalonada 240ms ease-out both; }
+.perfil-aviso button { padding: 0; border: 0; background: none; color: #6aa7e8; font: inherit; cursor: pointer; }
+.perfil-aviso button:hover { text-decoration: underline; }
+
+/* Controles en el título de cada sección: aparecen al pasar el ratón */
+.perfil-titulo { position: relative; }
+.perfil-controles { position: absolute; right: calc(100% + 4px); top: 50%; transform: translateY(-50%); display: flex; gap: 1px; opacity: 0; transition: opacity 120ms ease; }
+.ficha__seccion:hover .perfil-controles, .perfil-controles:focus-within, .perfil--plegada .perfil-controles { opacity: 1; }
+.perfil-controles button { display: grid; place-items: center; width: 20px; height: 22px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--texto-tenue); cursor: pointer; }
+.perfil-controles button:hover { background: #1f1f1f; color: var(--texto); }
+.perfil-controles svg { width: 14px; height: 14px; }
+.perfil-controles__asa { cursor: grab !important; touch-action: none; }
+.perfil-controles__plegar svg { transition: transform 180ms ease; }
+.perfil--plegada .perfil-controles__plegar svg { transform: rotate(-90deg); }
+/* Sección plegada: solo su título */
+.perfil--plegada > :not(.ficha__titulo-fila):not(.ficha__titulo):not(.grafica__cabecera):not(.perfil-titulo) { display: none !important; }
+.perfil--plegada { padding-bottom: 2px; }
+.perfil--plegada .ficha__titulo, .perfil--plegada .grafica__titulo { color: var(--texto-suave); }
+.perfil--oculta { display: none !important; }
+
+/* Una sola columna al enfocar, buscar, leer o en compacto */
+.perfil--filtrando .hoja-paciente__cuerpo, .perfil-modo--lectura .hoja-paciente__cuerpo, .perfil-modo--compacto .hoja-paciente__cuerpo { display: block; }
+.perfil--filtrando .hoja-paciente__datos, .perfil--filtrando .hoja-paciente__lado,
+.perfil-modo--lectura .hoja-paciente__datos, .perfil-modo--lectura .hoja-paciente__lado,
+.perfil-modo--compacto .hoja-paciente__datos, .perfil-modo--compacto .hoja-paciente__lado { display: contents; }
+
+/* Lectura: columna angosta, letra más grande y aire entre secciones */
+.perfil-modo--lectura .hoja-paciente__cuerpo, .perfil-modo--lectura #historial, .perfil-modo--lectura .notas-seccion { max-width: 760px; margin-left: auto; margin-right: auto; }
+.perfil-modo--lectura .ficha__seccion { padding-top: 40px; }
+.perfil-modo--lectura .ficha__titulo { font-size: 1.125rem; font-weight: 600; }
+.perfil-modo--lectura .propiedades-paciente, .perfil-modo--lectura .lista-clinica, .perfil-modo--lectura .sugerencias-ia__texto { font-size: var(--fs-md); line-height: 1.7; }
+.perfil-modo--lectura .hoja-paciente__resumen { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+/* Compacto: títulos en renglones finos; se abren al tocarlos */
+.perfil-modo--compacto .ficha__seccion { padding-top: 0; border-bottom: 1px solid #1c1c1c; }
+.perfil-modo--compacto .ficha__seccion > .perfil-titulo { min-height: 40px; display: flex; align-items: center; cursor: pointer; }
+.perfil-modo--compacto .ficha__seccion:not(.perfil--plegada) { padding-bottom: 18px; }
+.perfil-modo--compacto .perfil-controles { opacity: 1; }
+
+/* Arrastre */
+.perfil-fantasma { position: fixed; z-index: 500; pointer-events: none; opacity: .92; padding: 8px 12px; border: 1px solid #2c2c2c; border-radius: 10px; background: #181818; box-shadow: 0 18px 50px rgba(0, 0, 0, .55); max-height: 220px; overflow: hidden; transform: rotate(.6deg); animation: none !important; }
+.perfil--arrastrando { opacity: .25; }
+.perfil-marcador { height: 3px; margin: 10px 0; border-radius: 2px; background: #2383e2; box-shadow: 0 0 10px rgba(35, 131, 226, .6); }
+.perfil--recien-movida { animation: perfil-destello 900ms ease-out; }
+body.perfil-moviendo, body.perfil-moviendo * { cursor: grabbing !important; user-select: none; }
+@keyframes perfil-destello { from { background: rgba(35, 131, 226, .1); } to { background: transparent; } }
+
+@media (max-width: 760px) {
+  .perfil-barra { margin-top: 12px; flex-wrap: wrap; }
+  .perfil-barra__enfoques { flex: 1 1 100%; }
+  .perfil-barra__buscar { max-width: none; margin-left: 0; }
+  .perfil-controles { position: static; transform: none; opacity: 1; margin-right: 4px; }
+  .perfil-titulo { display: flex; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) { .perfil--recien-movida, .perfil-aviso { animation: none; } }

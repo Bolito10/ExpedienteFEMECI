@@ -19,7 +19,7 @@
   const periodoEl = raiz.querySelector('[data-agenda-periodo]');
   const icono = (nombre) => datos.iconos[nombre] || ico(nombre);
 
-  const ALTO_HORA = 48;
+  const ALTO_HORA = 76;         // alto de una hora: una cita de 30 min muestra nombre y hora
   const PASO = 15;              // minutos
   const JORNADA = [7, 21];      // horario habitual; fuera de él la rejilla se ve más oscura
   const DIAS_LISTA = 30;
@@ -217,11 +217,14 @@
     const hastaMin = Math.min(1440, minutosEntre(inicioColumna, fin));
     const alto = (Math.max(PASO, hastaMin - desdeMin) / 60) * ALTO_HORA - 2;
     const el = document.createElement('div');
-    el.className = `cal-evento ${clasesCita(c)}${alto < 38 ? ' cal-evento--corto' : ''}`;
+    el.className = `cal-evento ${clasesCita(c)}${alto < 34 ? ' cal-evento--corto' : alto < 60 ? ' cal-evento--medio' : ''}`;
     el.dataset.cita = c.id;
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
     el.setAttribute('aria-label', `${tituloCita(c)}, ${hm(ini)} a ${hm(fin)}, ${datos.estados[c.estado]}, ${c.profesional}`);
+    el.title = `${tituloCita(c)}
+${hm(ini)} – ${hm(fin)} · ${datos.estados[c.estado]}${c.motivo ? `
+${c.motivo}` : ''}`;
     const { carril, total, ancho } = reparto;
     el.style.cssText = `top:${(desdeMin / 60) * ALTO_HORA}px; height:${alto}px; left:calc(${(carril / total) * 100}% + 1px); width:calc(${(ancho / total) * 100}% - ${carril + ancho === total ? 8 : 3}px)`;
     el.innerHTML = contenidoBloque(c, ini, fin, conProfesional);
