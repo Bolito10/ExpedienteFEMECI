@@ -1066,3 +1066,6 @@ CREATE TABLE IF NOT EXISTS asistente_memoria (
   CONSTRAINT fk_memoria_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 GRANT SELECT, INSERT, UPDATE, DELETE ON expediente_femeci.asistente_memoria TO 'femeci_app'@'localhost';
+
+-- Página de cada fila de una base de datos: notas libres (panel lateral «Abrir»)
+ALTER TABLE pagina_filas ADD COLUMN IF NOT EXISTS notas MEDIUMTEXT NULL AFTER valores;

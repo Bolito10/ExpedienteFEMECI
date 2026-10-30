@@ -1,0 +1,46 @@
+/* ==========================================================================
+   Panel «Propiedades» de la tabla de pacientes (espacio.js): buscador, mostradas/ocultas con el ojo
+   y propiedad nueva al pie. Fino como los paneles de Notion.
+   ========================================================================== */
+.popover--props { width: 300px; padding: 0; }
+.props { display: flex; flex-direction: column; max-height: min(560px, 72vh); }
+.props__cabecera { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 12px 6px; }
+.props__cabecera span { font-size: var(--fs-sm); font-weight: 600; color: var(--texto-fuerte); }
+.props__cabecera small { font-size: 11px; color: var(--texto-tenue); }
+.props__buscar { display: flex; align-items: center; gap: 8px; margin: 2px 8px 6px; padding: 0 9px; height: 28px; border: 1px solid #262626; border-radius: 6px; background: #121212; }
+.props__buscar:focus-within { border-color: #3a3a3a; }
+.props__buscar svg { width: 14px; height: 14px; color: var(--texto-tenue); }
+.props__buscar input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--texto); font: inherit; font-size: var(--fs-sm); }
+.props__lista { flex: 1; overflow-y: auto; padding: 0 4px 6px; scrollbar-width: thin; }
+.props__grupo { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 3px; font-size: 11px; color: var(--texto-tenue); }
+.props__grupo button { border: 0; background: none; color: #6aa7e8; font: inherit; font-size: 11px; cursor: pointer; padding: 0; }
+.props__grupo button:hover { text-decoration: underline; }
+.props__fila { display: flex; align-items: center; gap: 9px; min-height: 30px; padding: 2px 6px 2px 8px; border-radius: 5px; transition: background 110ms ease; }
+.props__fila:hover { background: #1e1e1e; }
+.props__fila--oculta .props__nombre, .props__fila--oculta .props__icono { color: var(--texto-tenue); }
+.props__icono { display: grid; place-items: center; width: 16px; flex-shrink: 0; color: var(--texto-suave); }
+.props__icono svg { width: 14px; height: 14px; }
+.props__nombre { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--fs-sm); color: var(--texto); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.props__nombre small { font-size: 10.5px; color: var(--texto-tenue); overflow: hidden; text-overflow: ellipsis; }
+.props__marca { padding: 0 5px; border: 1px solid #2c2c2c; border-radius: 4px; font-size: 10px; line-height: 16px; color: var(--texto-tenue); }
+.props__ojo { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border: 0; border-radius: 5px; background: none; color: var(--texto-suave); cursor: pointer; transition: background 110ms ease, color 110ms ease; }
+.props__ojo:hover { background: #2a2a2a; color: var(--texto-fuerte); }
+.props__ojo svg { width: 15px; height: 15px; }
+.props__fila--oculta .props__ojo { color: var(--texto-tenue); }
+.props__vacio { padding: 18px 10px; text-align: center; font-size: var(--fs-sm); color: var(--texto-tenue); }
+.props__pie { padding: 4px; border-top: 1px solid #222; }
+.props__nueva-boton { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 5px; background: none; color: var(--texto-suave); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.props__nueva-boton:hover { background: #1e1e1e; color: var(--texto-fuerte); }
+.props__nueva-boton svg { width: 14px; height: 14px; }
+.props__nueva { display: flex; flex-direction: column; gap: 6px; padding: 6px 4px 4px; animation: entrada-escalonada 220ms ease-out both; }
+.props__entrada { height: 28px; padding: 0 8px; border: 1px solid #262626; border-radius: 6px; outline: 0; background: #121212; color: var(--texto); font: inherit; font-size: var(--fs-sm); }
+.props__entrada:focus { border-color: #3a3a3a; }
+.props__tipos { display: flex; flex-wrap: wrap; gap: 4px; }
+.props__tipo input { position: absolute; opacity: 0; pointer-events: none; }
+.props__tipo span { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid #2a2a2a; border-radius: 5px; font-size: 11.5px; color: var(--texto-suave); cursor: pointer; transition: border-color 110ms ease, color 110ms ease, background 110ms ease; }
+.props__tipo span svg { width: 12px; height: 12px; }
+.props__tipo:hover span { border-color: #3a3a3a; color: var(--texto); }
+.props__tipo input:checked + span { border-color: #3d5f88; background: rgba(35, 131, 226, .12); color: #cfe4ff; }
+.props__tipo input:focus-visible + span { outline: 1px solid #3d5f88; }
+.props__acciones { display: flex; justify-content: flex-end; gap: 6px; }
+.props__acciones .boton { height: 26px; padding: 0 10px; font-size: var(--fs-xs); }

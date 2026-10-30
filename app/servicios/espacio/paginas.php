@@ -17,7 +17,15 @@ const TIPOS_GRAFICA = ['barras', 'barras_apiladas', 'barras_horizontales', 'line
 const PATRON_IMAGEN_NOTA = '#^assets/subidas/nota-[0-9a-f]{16}\.(jpg|png|webp|gif)$#';
 
 /** Tipos de columna de una base de datos. */
-const TIPOS_COLUMNA = ['texto' => 'Texto', 'numero' => 'Número', 'fecha' => 'Fecha', 'seleccion' => 'Selección', 'casilla' => 'Casilla'];
+const TIPOS_COLUMNA = ['texto' => 'Texto', 'numero' => 'Número', 'fecha' => 'Fecha', 'seleccion' => 'Selección', 'casilla' => 'Casilla',
+                       'paciente' => 'Paciente', 'formula' => 'Fórmula'];
+
+/** Cálculo al pie de cada columna (como en Notion y Excel). */
+const CALCULOS_COLUMNA = ['contar', 'llenos', 'vacios', 'porcentaje_llenos', 'unicos', 'suma', 'promedio', 'mediana', 'minimo', 'maximo', 'rango', 'marcadas', 'sin_marcar', 'porcentaje_marcadas'];
+
+/** Funciones permitidas en las fórmulas (las evalúa assets/js/modulos/formulas.js). */
+const FUNCIONES_FORMULA = ['prop', 'if', 'round', 'abs', 'min', 'max', 'sum', 'avg', 'floor', 'ceil', 'sqrt', 'pow', 'concat', 'length', 'upper', 'lower', 'contains', 'replace',
+                           'empty', 'now', 'today', 'year', 'month', 'day', 'datediff', 'dateadd', 'formatdate', 'number', 'text', 'and', 'or', 'not'];
 
 /** Colores de las opciones de una columna de selección (paleta oscura de Notion). */
 const COLORES_OPCION = ['gris', 'cafe', 'naranja', 'amarillo', 'verde', 'azul', 'morado', 'rosa', 'rojo'];
@@ -291,7 +299,10 @@ function paginasEnPapelera(int $usuarioId): array
     foreach ($espacio as $p) {
         $padreEnPapelera = $p['padre_id'] !== null && isset($espacio[$p['padre_id']]) && $espacio[$p['padre_id']]['en_papelera'];
         if ($p['accesible'] && $p['eliminado_en'] !== null && !$padreEnPapelera && $p['seccion'] === null) {
-            $lista[] = ['id' => $p['id'], 'tipo' => $p['tipo'], 'titulo' => $p['titulo'], 'eliminado_en' => $p['eliminado_en']];
+            $padre = $p['padre_id'] !== null && isset($espacio[$p['padre_id']]) ? $espacio[$p['padre_id']] : null;
+            $lista[] = ['id' => $p['id'], 'tipo' => $p['tipo'], 'titulo' => $p['titulo'], 'eliminado_en' => $p['eliminado_en'],
+                        'en' => $padre ? ($padre['titulo'] !== '' ? $padre['titulo'] : TIPOS_PAGINA[$padre['tipo']]['nueva']) : ($p['compartida_efectiva'] ? 'Compartido' : 'Privado'),
+                        'propia' => (int) $p['propietario_id'] === $usuarioId];
         }
     }
     usort($lista, fn ($a, $b) => strcmp($b['eliminado_en'], $a['eliminado_en']));
@@ -419,6 +430,14 @@ function bloquesValidos(mixed $bloques): ?array
                 $bloque['tam'] = $b['tam'];   // pequeña o mediana (sin valor = ancho completo)
             }
         }
+        // Ancho libre en % (se ajusta arrastrando los bordes o lo indica la IA); reemplaza a «tam»
+        if (in_array($b['t'], ['imagen', 'grafica'], true) && is_numeric($b['ancho'] ?? null)) {
+            $ancho = (int) round((float) $b['ancho']);
+            if ($ancho >= 10 && $ancho < 100) {
+                $bloque['ancho'] = $ancho;
+                unset($bloque['tam']);
+            }
+        }
         if ($b['t'] === 'grafica') {
             $g = graficaValida($b['g'] ?? null);
             if (!$g) {
@@ -531,6 +550,8 @@ function valorDeCelda(string $tipo, mixed $valor): string|int|float|bool|null
         'fecha'   => is_string($valor) && DateTime::createFromFormat('!Y-m-d', $valor) ? $valor : null,
         'casilla' => (bool) $valor,
         'seleccion' => mb_substr(trim((string) $valor), 0, 100) ?: null,
+        'formula' => null,   // se calcula al mostrarla; no se guarda
+        'paciente' => pacienteDeCelda($valor),
         default   => mb_substr(trim((string) $valor), 0, 2000),
     };
 }
@@ -603,3 +624,84 @@ function textoDeNota(array $pagina): string
     }
     return trim(implode("\n", $lineas));
 }
+
+/** Celda de tipo Paciente: id de un paciente de la institución que el usuario puede ver, o null. */
+function pacienteDeCelda(mixed $valor): ?int
+{
+    $id = is_numeric($valor) ? (int) $valor : 0;
+    if ($id <= 0 || !puedeVerExpediente($id)) {
+        return null;
+    }
+    $c = db()->prepare('SELECT 1 FROM pacientes WHERE id = ? AND institucion_id = ? AND eliminado_en IS NULL');
+    $c->execute([$id, institucionId()]);
+    return $c->fetchColumn() ? $id : null;
+}
+
+/** Fórmula: texto acotado y solo con funciones conocidas (se evalúa en el navegador, sin eval). */
+function formulaValida(mixed $expresion): ?string
+{
+    $e = trim(mb_substr((string) $expresion, 0, 500));
+    if ($e === '') {
+        return '';
+    }
+    preg_match_all('/([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/', $e, $m);
+    foreach ($m[1] as $f) {
+        if (!in_array(strtolower($f), FUNCIONES_FORMULA, true)) {
+            return null;
+        }
+    }
+    return $e;
+}
+
+/** Vistas de una base de datos: tabla y gráficas (tipo, agrupar por, valor, columna del valor, título). */
+function vistasValidas(mixed $vistas, array $columnas): ?array
+{
+    if (!is_array($vistas)) {
+        return null;
+    }
+    $ids = array_column($columnas, 'id');
+    $lista = [];
+    foreach (array_slice(array_values($vistas), 0, 12) as $i => $v) {
+        if (!is_array($v)) {
+            continue;
+        }
+        $tipo = ($v['tipo'] ?? '') === 'grafica' ? 'grafica' : 'tabla';
+        $vista = ['id' => preg_match('/^v[a-z0-9]{1,12}$/', (string) ($v['id'] ?? '')) ? $v['id'] : 'v' . ($i + 1),
+                  'tipo' => $tipo, 'nombre' => mb_substr(trim((string) ($v['nombre'] ?? '')), 0, 40) ?: ($tipo === 'grafica' ? 'Gráfica' : 'Tabla')];
+        if ($tipo === 'grafica') {
+            $g = is_array($v['grafica'] ?? null) ? $v['grafica'] : [];
+            $vista['grafica'] = [
+                'tipo'      => in_array($g['tipo'] ?? '', TIPOS_GRAFICA, true) ? $g['tipo'] : 'barras',
+                'agrupar'   => in_array($g['agrupar'] ?? '', $ids, true) ? $g['agrupar'] : ($ids[0] ?? 'c1'),
+                'valor'     => in_array($g['valor'] ?? '', ['conteo', 'suma', 'promedio', 'minimo', 'maximo'], true) ? $g['valor'] : 'conteo',
+                'columna'   => in_array($g['columna'] ?? '', $ids, true) ? $g['columna'] : null,
+                'titulo'    => mb_substr((string) ($g['titulo'] ?? ''), 0, 120),
+                'orden'     => in_array($g['orden'] ?? '', ['valor', 'nombre'], true) ? $g['orden'] : 'valor',
+                'ocultar_vacios' => !empty($g['ocultar_vacios']),
+            ];
+        }
+        $lista[] = $vista;
+    }
+    return $lista ?: [['id' => 'v1', 'tipo' => 'tabla', 'nombre' => 'Tabla']];
+}
+
+/** Plantillas de base de datos: columnas iniciales (sin filas inventadas). */
+const PLANTILLAS_BD = [
+    'expedientes' => ['Expedientes clínicos', 'Una fila por paciente de la clínica, con enlace a su expediente.', [
+        ['Paciente', 'paciente'], ['Estado', 'seleccion', ['Activo', 'En seguimiento', 'Alta']], ['Próxima revisión', 'fecha'], ['Prioridad', 'seleccion', ['Alta', 'Media', 'Baja']], ['Notas', 'texto'],
+    ]],
+    'pendientes' => ['Pendientes', 'Tareas del equipo con responsable, fecha y estado.', [
+        ['Responsable', 'texto'], ['Paciente', 'paciente'], ['Fecha límite', 'fecha'], ['Estado', 'seleccion', ['Por hacer', 'En curso', 'Hecho']], ['Hecho', 'casilla'],
+    ]],
+    'inventario' => ['Inventario de medicamentos', 'Existencias, costo y caducidad, con el total calculado.', [
+        ['Presentación', 'texto'], ['Existencias', 'numero'], ['Costo unitario', 'numero'], ['Total', 'formula', null, 'prop("Existencias") * prop("Costo unitario")'],
+        ['Caducidad', 'fecha'], ['Por caducar', 'formula', null, 'if(empty(prop("Caducidad")), "", if(datediff(prop("Caducidad"), today(), "dias") < 60, "Sí", "No"))'],
+    ]],
+    'cobros' => ['Cobros', 'Consultas cobradas, pendientes y el total del día.', [
+        ['Paciente', 'paciente'], ['Fecha', 'fecha'], ['Monto', 'numero'], ['Forma de pago', 'seleccion', ['Efectivo', 'Tarjeta', 'Transferencia']], ['Pagado', 'casilla'],
+    ]],
+    'indicadores' => ['Indicadores clínicos', 'Mediciones por paciente con el IMC calculado.', [
+        ['Paciente', 'paciente'], ['Fecha', 'fecha'], ['Peso (kg)', 'numero'], ['Talla (cm)', 'numero'],
+        ['IMC', 'formula', null, 'round(prop("Peso (kg)") / pow(prop("Talla (cm)") / 100, 2), 1)'], ['Glucosa (mg/dL)', 'numero'], ['TA sistólica', 'numero'],
+    ]],
+];

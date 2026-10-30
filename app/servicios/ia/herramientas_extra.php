@@ -49,6 +49,35 @@ function herramientasIaExtra(string $acceso): array
         'descripcion' => 'Borra un recuerdo de tu memoria por su id (los ves en MEMORIA del contexto). Úsala cuando el usuario pida olvidar algo o un recuerdo ya no sea cierto.',
         'esquema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer']], 'required' => ['id']],
     ];
+    // Bases de datos: plantillas, gráficas junto a la tabla y cálculos
+    $lista[] = [
+        'nombre' => 'plantilla_base_datos',
+        'descripcion' => 'Aplica una plantilla a una base de datos vacía (recién creada con crear_pagina tipo base_datos): '
+            . implode('; ', array_map(fn ($k, $p) => "{$k} = {$p[0]} ({$p[1]})", array_keys(PLANTILLAS_BD), PLANTILLAS_BD)) . '. '
+            . '«expedientes» agrega una fila por cada paciente de la clínica con enlace a su expediente.',
+        'esquema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'plantilla' => ['type' => 'string', 'enum' => array_keys(PLANTILLAS_BD)]], 'required' => ['id', 'plantilla']],
+    ];
+    $lista[] = [
+        'nombre' => 'vista_grafica',
+        'descripcion' => 'Crea o cambia una vista de gráfica junto a la tabla de una base de datos (pestaña al lado de «Tabla»). '
+            . 'agrupar: columna que forma las categorías; valor: conteo (filas) o suma/promedio/minimo/maximo de columna_valor (numérica o fórmula). '
+            . 'Si existe una vista con ese nombre se actualiza.',
+        'esquema' => ['type' => 'object', 'properties' => [
+            'id' => ['type' => 'integer'], 'nombre' => ['type' => 'string', 'description' => 'Nombre de la pestaña'],
+            'tipo' => ['type' => 'string', 'enum' => TIPOS_GRAFICA], 'agrupar' => ['type' => 'string', 'description' => 'Nombre de la columna'],
+            'valor' => ['type' => 'string', 'enum' => ['conteo', 'suma', 'promedio', 'minimo', 'maximo']], 'columna_valor' => ['type' => 'string'],
+            'titulo' => ['type' => 'string'], 'ordenar' => ['type' => 'string', 'enum' => ['valor', 'nombre']], 'quitar' => ['type' => 'boolean', 'description' => 'Quita la vista con ese nombre'],
+        ], 'required' => ['id', 'nombre']],
+    ];
+    $lista[] = [
+        'nombre' => 'calcular_base_datos',
+        'descripcion' => 'Calcula en el servidor conteo, suma, promedio, mínimo o máximo de una columna de una base de datos, en total o agrupado por otra columna. '
+            . 'Úsala para responder preguntas con números exactos (no estimes). Las columnas de fórmula se calculan en pantalla: para ellas usa sus columnas de origen.',
+        'esquema' => ['type' => 'object', 'properties' => [
+            'id' => ['type' => 'integer'], 'operacion' => ['type' => 'string', 'enum' => ['conteo', 'suma', 'promedio', 'minimo', 'maximo']],
+            'columna' => ['type' => 'string', 'description' => 'Columna numérica (no hace falta para conteo)'], 'agrupar' => ['type' => 'string', 'description' => 'Columna para agrupar (opcional)'],
+        ], 'required' => ['id', 'operacion']],
+    ];
     // Notas debajo de las secciones principales (las ve todo el equipo en esa pantalla)
     $lista[] = [
         'nombre' => 'nota_de_seccion',
@@ -117,6 +146,9 @@ function ejecutarHerramientaIaExtra(string $nombre, array $e): ?array
         'editar_nota'            => iaEditarNota($e),
         'recordar'               => iaRecordar((string) ($e['texto'] ?? ''), isset($e['reemplaza_id']) ? (int) $e['reemplaza_id'] : null),
         'olvidar'                => iaOlvidar((int) ($e['id'] ?? 0)),
+        'plantilla_base_datos'   => iaPlantillaBaseDatos((int) ($e['id'] ?? 0), (string) ($e['plantilla'] ?? '')),
+        'vista_grafica'          => iaVistaGrafica($e),
+        'calcular_base_datos'    => iaCalcularBaseDatos($e),
         'nota_de_seccion'        => iaNotaDeSeccion((string) ($e['seccion'] ?? ''), (int) ($e['paciente_id'] ?? 0)),
         'listar_personas'        => iaListarPersonas((string) ($e['rol'] ?? '')),
         'enviar_aviso'           => iaEnviarAviso($e),
@@ -559,4 +591,138 @@ function iaNotaDeSeccion(string $seccion, int $pacienteId): array
     $leida = iaLeerPagina((int) $pagina['id']);
     $leida['url'] = URL_BASE . rutaDeSeccion($clave);
     return $leida;
+}
+
+/* ---------- Bases de datos: plantillas, vistas de gráfica y cálculos ---------- */
+function baseDatosIa(int $id): ?array
+{
+    $p = paginaIa($id, 'editar');
+    return $p && $p['tipo'] === 'base_datos' ? $p : null;
+}
+
+function guardarContenidoBdIa(array $p, array $datos, string $campo, string $resumen): void
+{
+    db()->prepare('UPDATE paginas SET contenido = ?, version = version + 1, actualizado_en = NOW(), actualizado_por = ? WHERE id = ?')
+        ->execute([json_encode($datos, JSON_UNESCAPED_UNICODE), usuarioIa(), $p['id']]);
+    registrarBitacora('paginas', (int) $p['id'], 'actualizar', $campo, null, $resumen . ' · asistente IA');
+}
+
+function iaPlantillaBaseDatos(int $id, string $clave): array
+{
+    $p = baseDatosIa($id);
+    if (!$p) {
+        return fallaIa('La base de datos no existe o no tienes permiso para editarla.');
+    }
+    $plantilla = PLANTILLAS_BD[$clave] ?? null;
+    $filas = db()->prepare('SELECT COUNT(*) FROM pagina_filas WHERE pagina_id = ?');
+    $filas->execute([$id]);
+    if (!$plantilla || count(columnasDe($p)) > 1 || $filas->fetchColumn()) {
+        return fallaIa('La plantilla solo se aplica a una base de datos vacía (sin filas ni propiedades). Crea una nueva con crear_pagina.');
+    }
+    $columnas = [['id' => 'c1', 'nombre' => $clave === 'expedientes' ? 'Expediente' : 'Nombre', 'tipo' => 'texto']];
+    foreach ($plantilla[2] as $i => $c) {
+        $col = ['id' => 'c' . ($i + 2), 'nombre' => $c[0], 'tipo' => $c[1]];
+        if (!empty($c[2])) {
+            $col['opciones'] = array_map(fn ($o, $k) => ['nombre' => $o, 'color' => COLORES_OPCION[$k % count(COLORES_OPCION)]], $c[2], array_keys($c[2]));
+        }
+        if (isset($c[3])) {
+            $col['expresion'] = $c[3];
+        }
+        $columnas[] = $col;
+    }
+    guardarContenidoBdIa($p, ['columnas' => $columnas, 'siguiente' => count($columnas) + 1, 'vistas' => [['id' => 'v1', 'tipo' => 'tabla', 'nombre' => 'Tabla']]], 'plantilla', $plantilla[0]);
+    $n = 0;
+    if ($clave === 'expedientes' && puede('ver_expediente')) {
+        $pac = db()->prepare('SELECT id, folio FROM pacientes WHERE institucion_id = ? AND eliminado_en IS NULL ORDER BY nombre LIMIT 5000');
+        $pac->execute([institucionId()]);
+        $ins = db()->prepare('INSERT INTO pagina_filas (pagina_id, valores, orden) VALUES (?, ?, ?)');
+        foreach ($pac->fetchAll() as $k => $x) {
+            $ins->execute([$id, json_encode(['c1' => $x['folio'], 'c2' => (int) $x['id'], 'c3' => 'Activo']), $k + 1]);
+            $n++;
+        }
+    }
+    return exitoIa(['columnas' => array_column($columnas, 'nombre'), 'filas' => $n], "Aplicó la plantilla «{$plantilla[0]}»" . ($n ? " con {$n} pacientes" : ''), $id, true);
+}
+
+function iaVistaGrafica(array $e): array
+{
+    $p = baseDatosIa((int) ($e['id'] ?? 0));
+    if (!$p) {
+        return fallaIa('La base de datos no existe o no tienes permiso para editarla.');
+    }
+    $datos = json_decode((string) $p['contenido'], true) ?: [];
+    $columnas = columnasDe($p);
+    $vistas = $datos['vistas'] ?? [['id' => 'v1', 'tipo' => 'tabla', 'nombre' => 'Tabla']];
+    $nombre = mb_substr(trim((string) ($e['nombre'] ?? '')), 0, 40) ?: 'Gráfica';
+    $i = array_search(mb_strtolower($nombre), array_map(fn ($v) => mb_strtolower($v['nombre']), $vistas), true);
+    if (!empty($e['quitar'])) {
+        if ($i === false || count($vistas) < 2) {
+            return fallaIa('No hay otra vista con ese nombre para quitar.');
+        }
+        array_splice($vistas, $i, 1);
+        $datos['vistas'] = vistasValidas($vistas, $columnas);
+        guardarContenidoBdIa($p, $datos, 'vistas', "Quitó la vista «{$nombre}»");
+        return exitoIa(['vistas' => array_column($datos['vistas'], 'nombre')], "Quitó la vista «{$nombre}»", (int) $p['id'], true);
+    }
+    $agrupar = columnaPorNombre($columnas, (string) ($e['agrupar'] ?? '')) ?? $columnas[0];
+    $valorCol = !empty($e['columna_valor']) ? columnaPorNombre($columnas, (string) $e['columna_valor']) : null;
+    if (!empty($e['columna_valor']) && !$valorCol) {
+        return fallaIa("No hay una columna llamada «{$e['columna_valor']}».");
+    }
+    $vista = ['id' => $i !== false ? $vistas[$i]['id'] : 'v' . substr(base_convert((string) time(), 10, 36), -6), 'tipo' => 'grafica', 'nombre' => $nombre, 'grafica' => [
+        'tipo' => $e['tipo'] ?? 'barras', 'agrupar' => $agrupar['id'], 'valor' => $valorCol ? ($e['valor'] ?? 'suma') : 'conteo',
+        'columna' => $valorCol['id'] ?? null, 'titulo' => (string) ($e['titulo'] ?? ''), 'orden' => $e['ordenar'] ?? 'valor',
+    ]];
+    if ($i !== false) {
+        $vistas[$i] = $vista;
+    } else {
+        $vistas[] = $vista;
+    }
+    $datos['vistas'] = vistasValidas($vistas, $columnas);
+    guardarContenidoBdIa($p, $datos, 'vistas', "Vista de gráfica «{$nombre}»");
+    return exitoIa(['vista' => $nombre, 'agrupa_por' => $agrupar['nombre']], ($i !== false ? 'Actualizó' : 'Creó') . " la gráfica «{$nombre}» junto a la tabla", (int) $p['id'], true);
+}
+
+function iaCalcularBaseDatos(array $e): array
+{
+    $p = paginaIa((int) ($e['id'] ?? 0), 'ver');
+    if (!$p || $p['tipo'] !== 'base_datos') {
+        return fallaIa('La base de datos no existe o no tienes acceso.');
+    }
+    $columnas = columnasDe($p);
+    $op = in_array($e['operacion'] ?? '', ['conteo', 'suma', 'promedio', 'minimo', 'maximo'], true) ? $e['operacion'] : 'conteo';
+    $col = !empty($e['columna']) ? columnaPorNombre($columnas, (string) $e['columna']) : null;
+    if ($op !== 'conteo' && !$col) {
+        return fallaIa('Indica la columna numérica que quieres calcular.');
+    }
+    if ($col && $col['tipo'] === 'formula') {
+        return fallaIa("«{$col['nombre']}» es una fórmula ({$col['expresion']}); calcula con sus columnas de origen.");
+    }
+    $agrupar = !empty($e['agrupar']) ? columnaPorNombre($columnas, (string) $e['agrupar']) : null;
+    $f = db()->prepare('SELECT valores FROM pagina_filas WHERE pagina_id = ?');
+    $f->execute([$p['id']]);
+    $grupos = [];
+    foreach ($f->fetchAll(PDO::FETCH_COLUMN) as $v) {
+        $v = json_decode($v, true) ?: [];
+        $clave = $agrupar ? (string) ($v[$agrupar['id']] ?? 'Sin valor') : 'Total';
+        if ($agrupar && $agrupar['tipo'] === 'casilla') {
+            $clave = !empty($v[$agrupar['id']]) ? 'Sí' : 'No';
+        }
+        $grupos[$clave] ??= [];
+        if ($op === 'conteo') {
+            $grupos[$clave][] = 1;
+        } elseif (is_numeric($v[$col['id']] ?? null)) {
+            $grupos[$clave][] = (float) $v[$col['id']];
+        }
+    }
+    $resultado = [];
+    foreach ($grupos as $k => $l) {
+        $resultado[$k] = !$l ? null : match ($op) {
+            'conteo' => count($l), 'suma' => round(array_sum($l), 4), 'promedio' => round(array_sum($l) / count($l), 4),
+            'minimo' => min($l), 'maximo' => max($l),
+        };
+    }
+    arsort($resultado);
+    return exitoIa(['operacion' => $op, 'columna' => $col['nombre'] ?? null, 'agrupado_por' => $agrupar['nombre'] ?? null, 'resultado' => $resultado],
+        'Calculó ' . $op . ($col ? " de «{$col['nombre']}»" : '') . ($agrupar ? " por «{$agrupar['nombre']}»" : ''));
 }

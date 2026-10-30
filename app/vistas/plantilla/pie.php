@@ -32,7 +32,7 @@
   </div>
 <?php endif; ?>
 
-<?php $iconosJs = ['imagen', 'grafica', 'carpeta', 'documento', 'tabla', 'chevron', 'mas', 'agregar', 'estrella', 'papelera', 'enlace', 'editar', 'reabrir', 'usuarios', 'candado', 'flecha_abajo', 'aa', 'numero', 'calendario', 'seleccion', 'casilla', 'buscar', 'agarre', 'titulo', 'vinetas', 'lista_numerada', 'comillas', 'separador', 'texto', 'cerrar', 'microfono', 'reloj', 'chispa', 'flecha_arriba', 'menos', 'clinico', 'info']; ?>
+<?php $iconosJs = ['imagen', 'grafica', 'carpeta', 'documento', 'tabla', 'chevron', 'mas', 'agregar', 'estrella', 'papelera', 'enlace', 'editar', 'reabrir', 'usuarios', 'candado', 'flecha_abajo', 'aa', 'numero', 'calendario', 'seleccion', 'casilla', 'buscar', 'agarre', 'titulo', 'vinetas', 'lista_numerada', 'comillas', 'separador', 'texto', 'cerrar', 'microfono', 'reloj', 'chispa', 'flecha_arriba', 'menos', 'clinico', 'info', 'usuario', 'flujo', 'expandir', 'doble_derecha', 'pildora', 'tarjeta', 'tendencia', 'ubicacion', 'telefono', 'mensaje', 'casa', 'gota', 'escudo']; ?>
 <?php $rellenosJs = ['documento', 'carpeta', 'tabla', 'reabrir']; ?>
 <script type="application/json" id="iconos-js"><?= json_encode(array_combine($iconosJs, array_map('icono', $iconosJs)) + array_combine(array_map(fn ($n) => "r_$n", $rellenosJs), array_map('iconoRelleno', $rellenosJs)), JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
 <script src="<?= recurso("js/markdown.js") ?>"></script>

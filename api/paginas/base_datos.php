@@ -8,6 +8,10 @@
  *   fila_agregar      {antes_de? | despues_de? | duplicar?}   fila id de referencia
  *   celda             {fila, columna, valor}
  *   fila_eliminar     {fila}
+ *   columna_cambiar   también {expresion} (fórmula) y {calculo} (pie de la columna)
+ *   vistas            {vistas}                tabla y gráficas de la base
+ *   fila_notas        {fila, notas}           texto de la página de una fila
+ *   plantilla         {plantilla}             columnas iniciales (solo si la base está vacía)
  */
 define('RESPUESTA_JSON', true);
 require_once __DIR__ . '/../../app/nucleo/inicio.php';
@@ -49,9 +53,10 @@ $columnas  = columnasDe($pagina);
 $siguiente = (int) ($datos['siguiente'] ?? count($columnas) + 1);
 $indice    = array_search((string) ($entrada['columna'] ?? ''), array_column($columnas, 'id'), true);
 
-$guardarColumnas = function (array $columnas, int $siguiente, ?string $campo = null, ?string $anterior = null, ?string $nuevo = null) use ($pdo, $pagina, $usuarioId): void {
+// Guarda columnas y lo demás del contenido (vistas) sin perderlo
+$guardarColumnas = function (array $columnas, int $siguiente, ?string $campo = null, ?string $anterior = null, ?string $nuevo = null) use ($pdo, $pagina, $usuarioId, &$datos): void {
     $pdo->prepare('UPDATE paginas SET contenido = ?, version = version + 1, actualizado_en = NOW(), actualizado_por = ? WHERE id = ?')
-        ->execute([json_encode(['columnas' => array_values($columnas), 'siguiente' => $siguiente], JSON_UNESCAPED_UNICODE), $usuarioId, $pagina['id']]);
+        ->execute([json_encode(['columnas' => array_values($columnas), 'siguiente' => $siguiente] + $datos, JSON_UNESCAPED_UNICODE), $usuarioId, $pagina['id']]);
     if ($campo) {
         registrarBitacora('paginas', (int) $pagina['id'], 'actualizar', $campo, $anterior, $nuevo);
     }
@@ -75,6 +80,13 @@ switch ($entrada['accion'] ?? '') {
             responder(400, ['ok' => false, 'error' => count($columnas) >= 30 ? 'Máximo 30 columnas.' : 'Tipo de columna no válido.']);
         }
         $columna = ['id' => 'c' . $siguiente, 'nombre' => $nombreColumna() ?: TIPOS_COLUMNA[$tipo], 'tipo' => $tipo];
+        if ($tipo === 'formula') {
+            $expresion = formulaValida($entrada['expresion'] ?? '');
+            if ($expresion === null) {
+                responder(400, ['ok' => false, 'error' => 'La fórmula usa una función desconocida.']);
+            }
+            $columna['expresion'] = $expresion;
+        }
         // Posición opcional (insertar a la izquierda o a la derecha de otra); la primera columna no se desplaza
         $posicion = isset($entrada['posicion']) ? max(1, min(count($columnas), (int) $entrada['posicion'])) : count($columnas);
         array_splice($columnas, $posicion, 0, [$columna]);
@@ -103,6 +115,20 @@ switch ($entrada['accion'] ?? '') {
                 responder(400, ['ok' => false, 'error' => 'Tipo de columna no válido.']);
             }
             $columnas[$indice]['tipo'] = $entrada['tipo'];
+        }
+        if (array_key_exists('expresion', $entrada)) {
+            $expresion = formulaValida($entrada['expresion']);
+            if ($expresion === null) {
+                responder(400, ['ok' => false, 'error' => 'La fórmula usa una función desconocida.']);
+            }
+            $columnas[$indice]['expresion'] = $expresion;
+        }
+        if (array_key_exists('calculo', $entrada)) {
+            if (in_array($entrada['calculo'], CALCULOS_COLUMNA, true)) {
+                $columnas[$indice]['calculo'] = $entrada['calculo'];
+            } else {
+                unset($columnas[$indice]['calculo']);
+            }
         }
         $guardarColumnas($columnas, $siguiente, 'columna', null, $columnas[$indice]['nombre']);
         responder(200, ['ok' => true, 'columna' => $columnas[$indice]]);
@@ -173,6 +199,55 @@ switch ($entrada['accion'] ?? '') {
             registrarBitacora('paginas', (int) $pagina['id'], 'actualizar', 'celda', null, $columna['nombre']);
         }
         responder(200, ['ok' => true, 'valor' => $valor, 'columna' => $columnas[$indice]]);
+
+    case 'vistas':
+        $vistas = vistasValidas($entrada['vistas'] ?? null, $columnas);
+        if ($vistas === null) {
+            responder(400, ['ok' => false, 'error' => 'Las vistas no son válidas.']);
+        }
+        $datos['vistas'] = $vistas;
+        $guardarColumnas($columnas, $siguiente, 'vistas', null, implode(', ', array_column($vistas, 'nombre')));
+        responder(200, ['ok' => true, 'vistas' => $vistas]);
+
+    case 'fila_notas':
+        $fila = $filaOError();
+        $notas = mb_substr((string) ($entrada['notas'] ?? ''), 0, 20000);
+        $pdo->prepare('UPDATE pagina_filas SET notas = ?, actualizado_en = NOW() WHERE id = ?')->execute([$notas !== '' ? $notas : null, $fila['id']]);
+        responder(200, ['ok' => true]);
+
+    case 'plantilla':
+        $clave = (string) ($entrada['plantilla'] ?? '');
+        $plantilla = PLANTILLAS_BD[$clave] ?? null;
+        $hayFilas = $pdo->prepare('SELECT COUNT(*) FROM pagina_filas WHERE pagina_id = ?');
+        $hayFilas->execute([$pagina['id']]);
+        if (!$plantilla || count($columnas) > 1 || $hayFilas->fetchColumn()) {
+            responder(400, ['ok' => false, 'error' => 'La plantilla solo se aplica a una base de datos vacía.']);
+        }
+        $columnas = [['id' => 'c1', 'nombre' => $clave === 'expedientes' ? 'Expediente' : 'Nombre', 'tipo' => 'texto']];
+        foreach ($plantilla[2] as $i => $c) {
+            $col = ['id' => 'c' . ($i + 2), 'nombre' => $c[0], 'tipo' => $c[1]];
+            if (!empty($c[2])) {
+                $col['opciones'] = array_map(fn ($o, $k) => ['nombre' => $o, 'color' => COLORES_OPCION[$k % count(COLORES_OPCION)]], $c[2], array_keys($c[2]));
+            }
+            if (isset($c[3])) {
+                $col['expresion'] = $c[3];
+            }
+            $columnas[] = $col;
+        }
+        $datos['vistas'] = [['id' => 'v1', 'tipo' => 'tabla', 'nombre' => 'Tabla']];
+        $guardarColumnas($columnas, count($columnas) + 1, 'plantilla', null, $plantilla[0]);
+        // Expedientes clínicos: una fila por cada paciente real de la clínica (nada inventado)
+        $filasNuevas = 0;
+        if ($clave === 'expedientes' && puede('ver_expediente')) {
+            $p = $pdo->prepare('SELECT id, folio FROM pacientes WHERE institucion_id = ? AND eliminado_en IS NULL ORDER BY nombre, primer_apellido LIMIT 5000');
+            $p->execute([institucionId()]);
+            $insertar = $pdo->prepare('INSERT INTO pagina_filas (pagina_id, valores, orden) VALUES (?, ?, ?)');
+            foreach ($p->fetchAll() as $k => $x) {
+                $insertar->execute([$pagina['id'], json_encode(['c1' => $x['folio'], 'c2' => (int) $x['id'], 'c3' => 'Activo'], JSON_UNESCAPED_UNICODE), $k + 1]);
+                $filasNuevas++;
+            }
+        }
+        responder(200, ['ok' => true, 'filas' => $filasNuevas]);
 
     case 'fila_eliminar':
         $fila = $filaOError();

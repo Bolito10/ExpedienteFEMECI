@@ -337,7 +337,7 @@ function celdaEditable(string $campo, ?string $valor, ?string $texto = null): st
 
 <script type="application/json" id="geo-datos"><?= json_encode(['pacientes' => $porEntidad, 'total' => $identificados, 'sinEntidad' => $sinEntidad, 'nombres' => array_intersect_key(ENTIDADES, MAPA_MEXICO)], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
 
-<script type="application/json" id="propiedades-pacientes"><?= json_encode(['columnas' => array_map(fn ($c) => ['clave' => $c['clave'], 'titulo' => $c['titulo'], 'original' => $c['nombre_original'], 'oculta' => $c['oculta'], 'extra' => isset($c['extra'])], $todasColumnas), 'editable' => puede('configurar')], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
+<script type="application/json" id="propiedades-pacientes"><?= json_encode(['columnas' => array_map(fn ($c) => ['clave' => $c['clave'], 'titulo' => $c['titulo'], 'original' => $c['nombre_original'], 'oculta' => $c['oculta'], 'extra' => isset($c['extra']), 'icono' => $c['icono'], 'grupo' => $c['grupo']], $todasColumnas), 'editable' => puede('configurar')], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
 
 <script type="application/json" id="opciones-editor"><?= json_encode($opcionesEditor, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
 

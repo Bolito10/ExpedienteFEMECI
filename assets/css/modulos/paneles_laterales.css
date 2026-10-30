@@ -1,0 +1,78 @@
+/* ==========================================================================
+   Recientes y Papelera (assets/js/modulos/paneles_laterales.js): panel fino junto a la barra lateral.
+   Líneas de 1px, texto pequeño, filas compactas; nada pesado.
+   ========================================================================== */
+.lateral-popover--panel {
+  width: 360px;
+  max-height: min(560px, 72vh);
+  padding: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  border-color: #262626;
+  background: #161616;
+}
+.panel-lateral__cabecera { display: flex; align-items: center; padding: 12px 14px 6px; }
+.panel-lateral__titulo { font-size: var(--fs-sm); font-weight: 600; color: var(--texto-fuerte); }
+.panel-lateral__buscar {
+  display: flex; align-items: center; gap: 8px;
+  margin: 4px 10px 6px; padding: 0 10px; height: 30px;
+  border: 1px solid #262626; border-radius: 7px; background: #121212;
+  transition: border-color 150ms ease;
+}
+.panel-lateral__buscar:focus-within { border-color: #3a3a3a; }
+.panel-lateral__buscar svg { width: 14px; height: 14px; color: var(--texto-tenue); flex-shrink: 0; }
+.panel-lateral__buscar input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--texto); font: inherit; font-size: var(--fs-sm); }
+.panel-lateral__buscar input::-webkit-search-cancel-button { display: none; }
+.panel-lateral__filtros { display: flex; gap: 2px; padding: 0 10px 6px; border-bottom: 1px solid #222; }
+.panel-lateral__filtros button {
+  height: 24px; padding: 0 9px; border: 0; border-radius: 5px; background: none;
+  color: var(--texto-tenue); font: inherit; font-size: var(--fs-xs); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.panel-lateral__filtros button:hover { color: var(--texto); background: #1e1e1e; }
+.panel-lateral__filtros button[aria-selected="true"] { color: var(--texto-fuerte); background: #232323; }
+.panel-lateral__lista { flex: 1; overflow-y: auto; padding: 4px; scrollbar-width: thin; }
+.panel-lateral__grupo { padding: 10px 10px 4px; font-size: 11px; font-weight: 500; letter-spacing: .02em; color: var(--texto-tenue); }
+.panel-lateral__fila {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: 36px; padding: 4px 8px;
+  border: 0; border-radius: 6px; background: none;
+  color: var(--texto); font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+  animation: entrada-escalonada 320ms var(--curva-salida, ease-out) both; animation-delay: calc(var(--i, 0) * 18ms);
+  transition: background 120ms ease, opacity 200ms ease, transform 200ms ease;
+}
+a.panel-lateral__fila:hover, button.panel-lateral__fila:hover, .panel-lateral__fila--papelera:hover { background: #1f1f1f; text-decoration: none; }
+.panel-lateral__fila--saliendo { opacity: 0; transform: translateX(-6px); }
+.panel-lateral__icono { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; color: var(--texto-suave); }
+.panel-lateral__icono svg { width: 15px; height: 15px; }
+.panel-lateral__texto { display: flex; flex-direction: column; flex: 1; min-width: 0; color: inherit; text-decoration: none; }
+.panel-lateral__texto:hover { text-decoration: none; }
+.panel-lateral__texto span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-sm); }
+.panel-lateral__texto small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; color: var(--texto-tenue); }
+.panel-lateral__fila time { flex-shrink: 0; font-size: 11px; color: var(--texto-tenue); font-variant-numeric: tabular-nums; }
+.panel-lateral__acciones { display: flex; gap: 2px; opacity: 0; transition: opacity 120ms ease; }
+.panel-lateral__fila--papelera:hover .panel-lateral__acciones, .panel-lateral__acciones:focus-within { opacity: 1; }
+.panel-lateral__acciones .boton-icono { width: 26px; height: 26px; }
+.boton-icono--peligro:hover { color: var(--peligro); }
+.panel-lateral__vacio { padding: 24px 14px; font-size: var(--fs-sm); color: var(--texto-tenue); text-align: center; }
+.panel-lateral__pie { padding: 8px 14px 10px; border-top: 1px solid #222; font-size: 11px; line-height: 1.45; color: var(--texto-tenue); }
+.panel-lateral__esqueleto { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.panel-lateral__esqueleto span {
+  height: 26px; border-radius: 6px;
+  background: linear-gradient(90deg, #1b1b1b 0%, #232323 50%, #1b1b1b 100%); background-size: 200% 100%;
+  animation: esqueleto-brillo 1.2s ease-in-out infinite;
+}
+@keyframes esqueleto-brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (hover: none) { .panel-lateral__acciones { opacity: 1; } }
+@media (max-width: 760px) { .lateral-popover--panel { width: auto; max-height: 70vh; } }
+@media (prefers-reduced-motion: reduce) { .panel-lateral__fila, .panel-lateral__esqueleto span { animation: none; } }
+/* Vive en <body> con posición fija: la barra lateral no lo recorta ni lo tapa el contenido */
+body > .lateral-popover { position: fixed; z-index: 400; top: auto; transform-origin: bottom left; }
+/* Anula los estilos genéricos del popover anterior (enlaces y spans a todo lo ancho) */
+.lateral-popover--panel a, .lateral-popover--panel button { width: auto; }
+.lateral-popover--panel .panel-lateral__fila { width: 100%; }
+.lateral-popover--panel .panel-lateral__icono { flex: 0 0 20px; }
+.lateral-popover--panel .panel-lateral__texto { flex: 1 1 auto; padding: 0; }
+.lateral-popover--panel .panel-lateral__texto span { flex: none; }
+.lateral-popover--panel .panel-lateral__acciones { flex: none; }
+.lateral-popover--panel .panel-lateral__filtros button { width: auto; flex: none; }

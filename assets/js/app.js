@@ -844,6 +844,13 @@ function iniciarBarraLateral() {
     if (!popover.hidden && popover.dataset.lista === nombre) { cerrar(); return; }
     cerrar();
     popover.dataset.lista = nombre;
+    // Paneles completos (assets/js/modulos/paneles_laterales.js); lo de abajo queda como respaldo
+    if (window.PanelLateral) {
+      popover.hidden = false;
+      b.setAttribute('aria-expanded', 'true');
+      window.PanelLateral.abrir(nombre, popover, { leerLista });
+      return;
+    }
     if (nombre === 'papelera') {
       popover.hidden = false;
       b.setAttribute('aria-expanded', 'true');
@@ -879,7 +886,7 @@ function iniciarBarraLateral() {
     }
     if (p) location.href = p.url;
   });
-  document.addEventListener('click', (ev) => { if (!ev.target.closest('.lateral-desplegable')) cerrar(); });
+  document.addEventListener('click', (ev) => { if (!ev.target.closest('.lateral-desplegable, [data-lateral-popover]')) cerrar(); });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') cerrar(); });
   document.querySelector('.barra-lateral__usuario')?.addEventListener('submit', () => {
     try { ['historial', 'cerradas'].forEach((n) => sessionStorage.removeItem(claveLista(n))); } catch (e) { /* opcional */ }

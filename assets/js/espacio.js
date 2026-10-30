@@ -3355,37 +3355,73 @@ document.addEventListener('DOMContentLoaded', iniciarPersonas);
     });
   };
 
-  // Panel "Propiedades": mostrar u ocultar columnas y agregar propiedades nuevas
+  // Panel "Propiedades" (como el de Notion): buscador, mostradas y ocultas con el ojo, y propiedad nueva al pie
   document.querySelector('[data-propiedades]')?.addEventListener('click', (ev) => {
     const boton = ev.currentTarget;
     const caja = document.createElement('div');
-    caja.className = 'propiedades';
-    caja.innerHTML = `
-      <div class="menu-flotante__titulo">Propiedades de la tabla</div>
-      <div class="propiedades__lista">${datos.columnas.map((c) => `
-        <label class="propiedades__fila"><span>${escaparHtml(c.titulo)}</span>
-          <input type="checkbox" data-mostrar="${escaparHtml(c.clave)}"${c.oculta ? '' : ' checked'}${c.clave === 'nombre' ? ' disabled' : ''}>
-          <i class="interruptor" aria-hidden="true"></i></label>`).join('')}</div>
-      <div class="menu-flotante__separador"></div>
-      <form class="propiedades__nueva">
-        <div class="menu-flotante__titulo">Nueva propiedad</div>
-        <input class="menu-flotante__entrada" name="nombre" placeholder="Nombre de la propiedad" maxlength="60" required>
-        <div class="propiedades__tipos">${Object.entries(TIPOS_PROP).map(([t, [texto, icono]], i) => `
-          <label><input type="radio" name="tipo" value="${t}"${i === 0 ? ' checked' : ''}><span>${ico(icono)}${texto}</span></label>`).join('')}</div>
-        <input class="menu-flotante__entrada" name="opciones" placeholder="Opciones separadas por comas" hidden>
-        <button type="submit" class="boton boton--primario propiedades__agregar">Agregar propiedad</button>
-      </form>`;
-    abrirPopover(boton, caja, { clase: 'popover--menu popover--propiedades', alinear: 'derecha' });
+    caja.className = 'props';
     let cambio = false;
-    caja.addEventListener('change', async (e) => {
-      const casilla = e.target.closest('[data-mostrar]');
-      if (casilla) {
-        try { await guardar({ accion: 'ocultar', clave: casilla.dataset.mostrar, oculta: !casilla.checked }); cambio = true; }
-        catch (err) { casilla.checked = !casilla.checked; mostrarNotificacion('error', err.message); }
+    let termino = '';
+    const fila = (c) => `
+      <div class="props__fila${c.oculta ? ' props__fila--oculta' : ''}" data-clave="${escaparHtml(c.clave)}">
+        <span class="props__icono">${ico(c.icono) || ico('aa')}</span>
+        <span class="props__nombre">${escaparHtml(c.titulo)}${c.titulo !== c.original ? `<small>${escaparHtml(c.original)}</small>` : ''}</span>
+        ${c.extra ? '<span class="props__marca">propia</span>' : ''}
+        ${datos.editable && c.clave !== 'nombre' ? `<button type="button" class="props__ojo" data-alternar="${escaparHtml(c.clave)}" title="${c.oculta ? 'Mostrar en la tabla' : 'Ocultar de la tabla'}" aria-pressed="${!c.oculta}">${ico(c.oculta ? 'ocultar' : 'ojo')}</button>` : ''}
+      </div>`;
+    const pintar = () => {
+      const q = normalizarTexto(termino);
+      const visibles = datos.columnas.filter((c) => !q || normalizarTexto(`${c.titulo} ${c.original}`).includes(q));
+      const mostradas = visibles.filter((c) => !c.oculta);
+      const ocultas = visibles.filter((c) => c.oculta);
+      caja.querySelector('[data-props-lista]').innerHTML = `
+        ${mostradas.length ? `<div class="props__grupo"><span>Mostradas en la tabla</span>${datos.editable && mostradas.length > 1 ? '<button type="button" data-todas="ocultar">Ocultar todas</button>' : ''}</div>${mostradas.map(fila).join('')}` : ''}
+        ${ocultas.length ? `<div class="props__grupo"><span>Ocultas</span>${datos.editable ? '<button type="button" data-todas="mostrar">Mostrar todas</button>' : ''}</div>${ocultas.map(fila).join('')}` : ''}
+        ${!visibles.length ? '<div class="props__vacio">Ninguna propiedad coincide.</div>' : ''}`;
+    };
+    caja.innerHTML = `
+      <div class="props__cabecera"><span>Propiedades</span><small>${datos.columnas.filter((c) => !c.oculta).length} de ${datos.columnas.length} visibles</small></div>
+      <label class="props__buscar">${ico('buscar')}<input type="search" placeholder="Buscar una propiedad" aria-label="Buscar una propiedad" data-props-buscar></label>
+      <div class="props__lista" data-props-lista></div>
+      ${datos.editable ? `
+      <div class="props__pie">
+        <button type="button" class="props__nueva-boton" data-props-nueva>${ico('agregar')}<span>Nueva propiedad</span></button>
+        <form class="props__nueva" hidden>
+          <input class="props__entrada" name="nombre" placeholder="Nombre de la propiedad" maxlength="60" required>
+          <div class="props__tipos" role="radiogroup" aria-label="Tipo">${Object.entries(TIPOS_PROP).map(([t, [texto, icono]], i) => `
+            <label class="props__tipo"><input type="radio" name="tipo" value="${t}"${i === 0 ? ' checked' : ''}><span>${ico(icono)}${texto}</span></label>`).join('')}</div>
+          <input class="props__entrada" name="opciones" placeholder="Opciones separadas por comas (Alta, Media, Baja)" hidden>
+          <div class="props__acciones"><button type="button" class="boton boton--secundario" data-props-cancelar>Cancelar</button><button type="submit" class="boton boton--primario">Agregar</button></div>
+        </form>
+      </div>` : ''}`;
+    pintar();
+    abrirPopover(boton, caja, { clase: 'popover--menu popover--props', alinear: 'derecha' });
+    caja.querySelector('[data-props-buscar]').focus();
+    caja.querySelector('[data-props-buscar]').addEventListener('input', (e) => { termino = e.target.value.trim(); pintar(); });
+    const alternar = async (claves, oculta) => {
+      const previas = claves.map((k) => [k, datos.columnas.find((c) => c.clave === k).oculta]);
+      claves.forEach((k) => { datos.columnas.find((c) => c.clave === k).oculta = oculta; });
+      pintar();
+      caja.querySelector('.props__cabecera small').textContent = `${datos.columnas.filter((c) => !c.oculta).length} de ${datos.columnas.length} visibles`;
+      try {
+        for (const k of claves) await guardar({ accion: 'ocultar', clave: k, oculta });
+        cambio = true;
+      } catch (err) {
+        previas.forEach(([k, v]) => { datos.columnas.find((c) => c.clave === k).oculta = v; });
+        pintar();
+        mostrarNotificacion('error', err.message);
       }
-      if (e.target.name === 'tipo') caja.querySelector('[name="opciones"]').hidden = e.target.value !== 'seleccion';
+    };
+    caja.addEventListener('click', (e) => {
+      const ojo = e.target.closest('[data-alternar]');
+      if (ojo) { const c = datos.columnas.find((x) => x.clave === ojo.dataset.alternar); alternar([c.clave], !c.oculta); return; }
+      const todas = e.target.closest('[data-todas]');
+      if (todas) { const ocultar = todas.dataset.todas === 'ocultar'; alternar(datos.columnas.filter((c) => c.clave !== 'nombre' && c.oculta !== ocultar).map((c) => c.clave), ocultar); return; }
+      if (e.target.closest('[data-props-nueva]')) { e.target.closest('[data-props-nueva]').hidden = true; const f = caja.querySelector('.props__nueva'); f.hidden = false; f.nombre.focus(); return; }
+      if (e.target.closest('[data-props-cancelar]')) { caja.querySelector('.props__nueva').hidden = true; caja.querySelector('[data-props-nueva]').hidden = false; }
     });
-    caja.querySelector('form').addEventListener('submit', async (e) => {
+    caja.addEventListener('change', (e) => { if (e.target.name === 'tipo') caja.querySelector('[name="opciones"]').hidden = e.target.value !== 'seleccion'; });
+    caja.querySelector('.props__nueva')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget;
       try {

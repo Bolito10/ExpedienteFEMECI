@@ -14,6 +14,7 @@
       ['Continuar escribiendo', 'Continúa escribiendo a partir del renglón actual, con el mismo tono y formato. Devuelve solo el texto nuevo.', 'editar'],
       ['Resumir la nota', 'Resume esta nota en pocas líneas, con lo más importante primero.', 'texto'],
       ['Sacar pendientes', 'Haz una lista de tareas con los pendientes que aparecen en esta nota (formato - [ ] tarea).', 'casilla'],
+      ['Agregar una imagen', 'Busca una imagen de licencia libre que ilustre el renglón actual (o el tema de la nota) e insértala justo debajo de ese renglón, a 60 % de ancho, con su fuente en el pie.', 'imagen'],
       ['Ordenar por apartados', 'Propón esta nota ordenada en apartados con encabezados claros, sin perder información.', 'titulo'],
     ]],
     ['Editar el renglón', [
@@ -119,7 +120,7 @@
           } else if (ev.t === 'herramienta') {
             const ultimo = pasos.querySelector('.ia-linea__paso--activo');
             if (ultimo) { ultimo.classList.remove('ia-linea__paso--activo', 'trShimmer'); ultimo.classList.add(ev.ok ? 'ia-linea__paso--hecho' : 'ia-linea__paso--fallo'); ultimo.textContent = ev.d || ultimo.textContent; }
-            if (ev.ok && ['editar_nota', 'escribir_nota'].includes(ev.nombre)) editoLaNota = true;
+            if (ev.ok && ['editar_nota', 'escribir_nota', 'insertar_imagen', 'ajustar_imagen', 'crear_grafica'].includes(ev.nombre)) editoLaNota = true;
           } else if (ev.t === 'error' || ev.t === 'aviso') {
             respuesta += `\n\n*${ev.d}*`;
             md.innerHTML = markdownSeguro(respuesta);

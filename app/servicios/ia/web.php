@@ -328,7 +328,7 @@ function guardarImagenNota(string $binario): array
     return ['ruta' => 'assets/subidas/' . $nombre, 'ancho' => $info[0], 'alto' => $info[1]];
 }
 
-function iaInsertarImagen(int $id, string $url, string $pie, string $tamano = '', string $despues = ''): array
+function iaInsertarImagen(int $id, string $url, string $pie, string $tamano = '', string $despues = '', int $ancho = 0): array
 {
     $p = paginaIa($id, 'editar');
     if (!$p || $p['tipo'] !== 'nota') {
@@ -344,6 +344,10 @@ function iaInsertarImagen(int $id, string $url, string $pie, string $tamano = ''
     $bloque = ['t' => 'imagen', 'x' => mb_substr(trim($pie), 0, 300), 'src' => $img['ruta']];
     if (isset(['pequeña' => 1, 'mediana' => 1][$tamano])) {
         $bloque['tam'] = $tamano === 'pequeña' ? 's' : 'm';
+    }
+    if ($ancho >= 10 && $ancho < 100) {
+        $bloque['ancho'] = $ancho;
+        unset($bloque['tam']);
     }
     [$bloques] = insertarBloquesIa(bloquesDeNotaIa($p), [$bloque], $despues);
     $bloques = bloquesValidos($bloques);
@@ -418,4 +422,50 @@ function urlPermitidaIa(int $usuarioId, string $url, bool $exacta = false): bool
     }
     $lista = urlsPermitidasIa($usuarioId);
     return $exacta ? isset($lista['urls'][$url]) : isset($lista['hosts'][$host]);
+}
+
+/** Cambia el ancho (10–100 %) de una imagen o gráfica de una nota, elegida por su número o por su pie. */
+function iaAjustarImagen(int $id, string $cual, int $ancho): array
+{
+    $p = paginaIa($id, 'editar');
+    if (!$p || $p['tipo'] !== 'nota') {
+        return fallaIa('La nota no existe o no tienes permiso para editarla.');
+    }
+    if ($ancho < 10 || $ancho > 100) {
+        return fallaIa('El ancho va de 10 a 100 (% del ancho de la nota).');
+    }
+    $bloques = bloquesDeNotaIa($p);
+    $visuales = array_keys(array_filter($bloques, fn ($b) => in_array($b['t'] ?? '', ['imagen', 'grafica'], true)));
+    if (!$visuales) {
+        return fallaIa('La nota no tiene imágenes ni gráficas.');
+    }
+    $indice = null;
+    if (ctype_digit(trim($cual))) {
+        $indice = $visuales[(int) $cual - 1] ?? null;
+    } else {
+        foreach ($visuales as $i) {
+            $pie = mb_strtolower((string) ($bloques[$i]['x'] ?? '') . ' ' . (string) ($bloques[$i]['g']['titulo'] ?? ''));
+            if ($cual !== '' && str_contains($pie, mb_strtolower(trim($cual)))) {
+                $indice = $i;
+                break;
+            }
+        }
+    }
+    if ($indice === null) {
+        return fallaIa('No encontré esa imagen o gráfica. Hay ' . count($visuales) . '; indica su número (1 = la primera).');
+    }
+    unset($bloques[$indice]['tam']);
+    if ($ancho >= 100) {
+        unset($bloques[$indice]['ancho']);
+    } else {
+        $bloques[$indice]['ancho'] = $ancho;
+    }
+    $bloques = bloquesValidos(array_values($bloques));
+    if ($bloques === null) {
+        return fallaIa('No se pudo guardar el cambio.');
+    }
+    db()->prepare('UPDATE paginas SET contenido = ?, version = version + 1, actualizado_en = NOW(), actualizado_por = ? WHERE id = ?')
+        ->execute([json_encode($bloques, JSON_UNESCAPED_UNICODE), usuarioIa(), $id]);
+    registrarBitacora('paginas', $id, 'actualizar', 'contenido', null, 'ancho de imagen');
+    return exitoIa(['id' => $id, 'ancho' => $ancho], "Ajustó el ancho a {$ancho} %", $id, true);
 }

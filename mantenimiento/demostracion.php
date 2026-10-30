@@ -6,6 +6,9 @@
  *
  *   php demostracion.php crear      crea la clínica, sus cuentas, pacientes, historial y citas
  *   php demostracion.php eliminar   borra la clínica de demostración y todo lo suyo (incluidas sus imágenes)
+ *   php demostracion.php crear --en=<institución>     pone los pacientes ficticios en una clínica existente
+ *                                                      (autor: su administrador); guarda sus ids en configuracion
+ *   php demostracion.php eliminar --en=<institución>  quita SOLO esos pacientes ficticios y lo suyo
  *
  * Los nombres, CURP y teléfonos son inventados. Las cuentas usan el dominio reservado .test.
  */
@@ -28,6 +31,45 @@ const DEMO_CORREOS = ['demo.admin@expedientes.test', 'demo.medico@expedientes.te
 
 $accion = $argv[1] ?? '';
 $pdo = db();
+$en = 0;
+foreach ($argv as $a) {
+    if (preg_match('/^--en=(\d+)$/', $a, $m)) {
+        $en = (int) $m[1];
+    }
+}
+
+// Quitar los pacientes ficticios puestos en una clínica real (solo los ids que guardó «crear --en»)
+if ($accion === 'eliminar' && $en) {
+    $c = $pdo->prepare("SELECT valor FROM configuracion WHERE institucion_id = ? AND clave = 'demo_pacientes'");
+    $c->execute([$en]);
+    $ids = array_map('intval', json_decode((string) $c->fetchColumn(), true) ?: []);
+    if (!$ids) {
+        exit("Esa clínica no tiene pacientes ficticios.\n");
+    }
+    $marcas = implode(',', array_fill(0, count($ids), '?'));
+    $archivos = $pdo->prepare("SELECT archivo FROM imagenes_medicas WHERE paciente_id IN ($marcas)");
+    $archivos->execute($ids);
+    foreach ($archivos->fetchAll(PDO::FETCH_COLUMN) as $a) {
+        @unlink(CARPETA_IMAGENES . "/$en/" . basename($a));
+    }
+    $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+    $pdo->beginTransaction();
+    $historial = $pdo->prepare("SELECT id FROM historial_clinico WHERE paciente_id IN ($marcas)");
+    $historial->execute($ids);
+    $hIds = $historial->fetchAll(PDO::FETCH_COLUMN) ?: [0];
+    $pdo->prepare("DELETE FROM bitacora WHERE tabla = 'historial_clinico' AND registro_id IN (" . implode(',', array_fill(0, count($hIds), '?')) . ')')->execute($hIds);
+    $pdo->prepare("DELETE FROM bitacora WHERE tabla = 'pacientes' AND registro_id IN ($marcas)")->execute($ids);
+    foreach (['historial_clinico', 'citas', 'imagenes_medicas', 'codigos_acceso'] as $t) {
+        $pdo->prepare("DELETE FROM $t WHERE paciente_id IN ($marcas)")->execute($ids);
+    }
+    $secciones = array_map(fn ($i) => "expediente:$i", $ids);
+    $pdo->prepare('DELETE FROM paginas WHERE institucion_id = ? AND seccion IN (' . $marcas . ')')->execute([$en, ...$secciones]);
+    $pdo->prepare("DELETE FROM pacientes WHERE institucion_id = ? AND id IN ($marcas)")->execute([$en, ...$ids]);
+    $pdo->prepare("DELETE FROM configuracion WHERE institucion_id = ? AND clave = 'demo_pacientes'")->execute([$en]);
+    $pdo->commit();
+    $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+    exit('Se quitaron ' . count($ids) . " pacientes ficticios.\n");
+}
 
 function institucionDemo(): ?int
 {
@@ -79,7 +121,7 @@ if ($accion !== 'crear') {
     fwrite(STDERR, "Uso: php demostracion.php crear|eliminar\n");
     exit(1);
 }
-if (institucionDemo()) {
+if (!$en && institucionDemo()) {
     exit("La clínica de demostración ya existe. Usa «eliminar» antes de volver a crearla.\n");
 }
 
@@ -138,6 +180,23 @@ function cita(array $paciente, int $profesional, int $dias, string $hora, int $m
 
 /* ---------- Clínica y cuentas ---------- */
 
+if ($en) {
+    $c = $pdo->prepare("SELECT valor FROM configuracion WHERE institucion_id = ? AND clave = 'demo_pacientes'");
+    $c->execute([$en]);
+    if ($c->fetchColumn()) {
+        exit("Esa clínica ya tiene los pacientes ficticios. Usa «eliminar --en=$en» antes de volver a crearlos.\n");
+    }
+    $c = $pdo->prepare("SELECT u.id, u.nombre, u.cedula_profesional, i.nombre AS clinica FROM usuarios u JOIN instituciones i ON i.id = u.institucion_id
+                         WHERE u.institucion_id = ? AND u.rol = 'administrador' AND u.activo = 1 ORDER BY u.id LIMIT 1");
+    $c->execute([$en]);
+    $u = $c->fetch();
+    if (!$u) {
+        exit("No hay un administrador activo en esa clínica.\n");
+    }
+    $admin = $medico = ['id' => (int) $u['id'], 'nombre' => $u['nombre'], 'cedula' => $u['cedula_profesional']];
+    $inst = $en;
+    $clave = null;
+} else {
 $clave = rtrim(strtr(base64_encode(random_bytes(12)), '+/', 'Kq'), '=');
 $pdo->beginTransaction();
 $crearUsuario = $pdo->prepare(
@@ -154,13 +213,14 @@ $pdo->prepare("INSERT INTO instituciones (nombre, tipo, domicilio, entidad, crea
 $inst = (int) $pdo->lastInsertId();
 $pdo->prepare('UPDATE usuarios SET institucion_id = ? WHERE id IN (?, ?)')->execute([$inst, $admin['id'], $medico['id']]);
 $pdo->commit();
+}
 
 // La bitácora queda a nombre de la doctora de la demo y en su institución
 $_SESSION['usuario'] = ['id' => $admin['id'], 'nombre' => $admin['nombre'], 'rol' => 'administrador', 'institucion_id' => $inst];
 
 /* ---------- Pacientes ---------- */
 
-$receta = ['institucion' => 'Universidad Nacional (demo)', 'establecimiento' => DEMO_NOMBRE, 'domicilio' => 'Av. Ficticia 123, CDMX'];
+$receta = ['cedula_prescriptor' => '00000001', 'institucion' => 'Universidad Nacional (demo)', 'establecimiento' => $en ? $u['clinica'] : DEMO_NOMBRE, 'domicilio' => 'Av. Ficticia 123, CDMX'];
 
 $PACIENTES = [
     ['María Fernanda', 'López', 'Ortega', '1968-04-12', 'M', 'DF', 'Calle Jacarandas 45, Col. Del Valle', 'Benito Juárez, Ciudad de México', 'Jorge López (esposo)', 'Penicilina', 'O+', 'Diabetes mellitus tipo 2; Hipertensión arterial', 'Metformina 850 mg; Losartán 50 mg', 'Control de diabetes e hipertensión'],
@@ -442,6 +502,10 @@ cita($p[9], $admin['id'], 4, '09:00', 30, 'Resultado de prueba de esfuerzo', 'pr
 cita($p[5], $medico['id'], 7, '16:00', 30, 'Seguimiento de migraña con propranolol', 'programada');
 cita($p[2], $admin['id'], 23, '12:00', 30, 'Control prenatal 32 SDG', 'programada');
 cita($p[0], $admin['id'], 78, '09:30', 30, 'Control trimestral con HbA1c', 'programada');
+
+if ($en) {
+    db()->prepare("INSERT INTO configuracion (institucion_id, clave, valor) VALUES (?, 'demo_pacientes', ?)")->execute([$inst, json_encode(array_column($p, 'id'))]);
+}
 
 // Pacientes y folios para la carga de imágenes (la hace otro script con la sesión de la demo)
 echo json_encode([

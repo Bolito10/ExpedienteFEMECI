@@ -20,8 +20,9 @@ function herramientasIa(string $acceso): array
         'type' => 'object',
         'properties' => [
             'nombre'   => ['type' => 'string', 'description' => 'Nombre de la propiedad (columna).'],
-            'tipo'     => ['type' => 'string', 'enum' => array_keys(TIPOS_COLUMNA), 'description' => 'texto, numero, fecha (AAAA-MM-DD), seleccion o casilla.'],
+            'tipo'     => ['type' => 'string', 'enum' => array_keys(TIPOS_COLUMNA), 'description' => 'texto, numero, fecha (AAAA-MM-DD), seleccion, casilla, paciente (id del paciente; enlaza al expediente) o formula (calculada).'],
             'opciones' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Solo para seleccion: opciones iniciales.'],
+            'expresion' => ['type' => 'string', 'description' => 'Solo para formula. Sintaxis tipo Notion/Excel: prop("Columna"), + - * / ^ %, comparaciones, if(cond, a, b), round(x, d), sum, avg, min, max, concat, empty, today(), datediff(a, b, "dias"), dateadd(f, n, "dias"), formatdate, year, month. Ej. prop("Existencias") * prop("Costo")'],
         ],
         'required' => ['nombre', 'tipo'],
     ];
@@ -105,8 +106,17 @@ function herramientasIa(string $acceso): array
             'esquema' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'integer', 'description' => 'Id de la nota'], 'url' => ['type' => 'string'], 'pie' => ['type' => 'string'],
                 'tamano' => ['type' => 'string', 'enum' => ['pequeña', 'mediana', 'completa'], 'description' => 'Por defecto completa'],
+                'ancho' => ['type' => 'integer', 'description' => 'Ancho exacto en % del ancho de la nota (10 a 100); tiene prioridad sobre tamano'],
                 'despues_de' => ['type' => 'string', 'description' => 'Texto del bloque o encabezado tras el cual colocarla (por defecto al final)'],
             ], 'required' => ['id', 'url']],
+        ],
+        [
+            'nombre' => 'ajustar_imagen',
+            'descripcion' => 'Cambia el ancho de una imagen o gráfica que ya está en una nota (como cuando el usuario arrastra sus bordes). '
+                . 'cual: número de la imagen o gráfica en orden (1 = la primera) o parte de su pie de foto. ancho: % del ancho de la nota (10 a 100).',
+            'esquema' => ['type' => 'object', 'properties' => [
+                'id' => ['type' => 'integer', 'description' => 'Id de la nota'], 'cual' => ['type' => 'string'], 'ancho' => ['type' => 'integer'],
+            ], 'required' => ['id', 'cual', 'ancho']],
         ],
     ];
     $web[] = [
@@ -205,7 +215,8 @@ function ejecutarHerramientaIa(string $nombre, array $entrada, string $acceso): 
             'buscar_en_internet' => iaBuscarInternet((string) ($entrada['consulta'] ?? ''), (string) ($entrada['tipo'] ?? 'web')),
             'leer_sitio_web'   => iaLeerSitio((string) ($entrada['url'] ?? '')),
             'crear_grafica'    => iaCrearGrafica($entrada),
-            'insertar_imagen'  => iaInsertarImagen((int) ($entrada['id'] ?? 0), (string) ($entrada['url'] ?? ''), (string) ($entrada['pie'] ?? ''), (string) ($entrada['tamano'] ?? ''), (string) ($entrada['despues_de'] ?? '')),
+            'insertar_imagen'  => iaInsertarImagen((int) ($entrada['id'] ?? 0), (string) ($entrada['url'] ?? ''), (string) ($entrada['pie'] ?? ''), (string) ($entrada['tamano'] ?? ''), (string) ($entrada['despues_de'] ?? ''), (int) ($entrada['ancho'] ?? 0)),
+            'ajustar_imagen'   => iaAjustarImagen((int) ($entrada['id'] ?? 0), (string) ($entrada['cual'] ?? ''), (int) ($entrada['ancho'] ?? 0)),
             'ver_agenda'       => iaVerAgenda($entrada),
             'agendar_cita'     => iaAgendarCita($entrada),
             'actualizar_cita'  => iaActualizarCita($entrada),
@@ -447,6 +458,13 @@ function columnaIa(mixed $c, int $numero): ?array
     }
     $nombre = mb_substr(trim((string) ($c['nombre'] ?? '')), 0, 60) ?: TIPOS_COLUMNA[$c['tipo']];
     $col = ['id' => 'c' . $numero, 'nombre' => $nombre, 'tipo' => $c['tipo']];
+    if ($c['tipo'] === 'formula') {
+        $expresion = formulaValida($c['expresion'] ?? '');
+        if ($expresion === null) {
+            return null;
+        }
+        $col['expresion'] = $expresion;
+    }
     if ($c['tipo'] === 'seleccion' && !empty($c['opciones']) && is_array($c['opciones'])) {
         $col['opciones'] = array_values(array_map(fn ($o, $i) => ['nombre' => mb_substr(trim((string) $o), 0, 100), 'color' => COLORES_OPCION[$i % count(COLORES_OPCION)]],
             array_slice($c['opciones'], 0, 30), array_keys(array_slice($c['opciones'], 0, 30))));
@@ -506,7 +524,7 @@ function iaAgregarColumnas(int $id, array $columnasNuevas): array
         }
     }
     db()->prepare('UPDATE paginas SET contenido = ?, version = version + 1, actualizado_en = NOW(), actualizado_por = ? WHERE id = ?')
-        ->execute([json_encode(['columnas' => $columnas, 'siguiente' => $siguiente], JSON_UNESCAPED_UNICODE), usuarioIa(), $id]);
+        ->execute([json_encode(['columnas' => $columnas, 'siguiente' => $siguiente] + $datos, JSON_UNESCAPED_UNICODE), usuarioIa(), $id]);
     return exitoIa(['agregadas' => $agregadas], 'Agregó ' . count($agregadas) . (count($agregadas) === 1 ? ' propiedad' : ' propiedades') . ' a «' . ($p['titulo'] ?: 'Nueva base de datos') . '»', $id, true);
 }
 
@@ -558,7 +576,7 @@ function iaAgregarFilas(int $id, array $filas): array
     }
     if ($cambioColumnas) {
         $pdo->prepare('UPDATE paginas SET contenido = ? WHERE id = ?')
-            ->execute([json_encode(['columnas' => $columnas, 'siguiente' => (int) ($datos['siguiente'] ?? count($columnas) + 1)], JSON_UNESCAPED_UNICODE), $id]);
+            ->execute([json_encode(['columnas' => $columnas, 'siguiente' => (int) ($datos['siguiente'] ?? count($columnas) + 1)] + $datos, JSON_UNESCAPED_UNICODE), $id]);
     }
     $pdo->prepare('UPDATE paginas SET actualizado_en = NOW(), actualizado_por = ? WHERE id = ?')->execute([usuarioIa(), $id]);
     registrarBitacora('paginas', $id, 'actualizar', 'fila_nueva', null, $agregadas . ' filas · asistente IA');
@@ -620,6 +638,8 @@ function herramientasIaAmpliadas(string $acceso): array
             'esquema' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'integer'], 'columna' => ['type' => 'string', 'description' => 'Nombre actual de la columna'],
                 'nuevo_nombre' => ['type' => 'string'], 'tipo' => ['type' => 'string', 'enum' => array_keys(TIPOS_COLUMNA)], 'eliminar' => ['type' => 'boolean'],
+                'expresion' => ['type' => 'string', 'description' => 'Nueva fórmula (columna de tipo formula)'],
+                'calculo' => ['type' => 'string', 'enum' => array_merge(CALCULOS_COLUMNA, ['ninguno']), 'description' => 'Cálculo que se muestra al pie de la columna'],
             ], 'required' => ['id', 'columna']],
         ],
     ];
@@ -822,10 +842,24 @@ function iaEditarColumna(int $id, string $nombre, array $e): array
         if (!empty($e['tipo']) && isset(TIPOS_COLUMNA[$e['tipo']]) && $indice > 0) {
             $columnas[$indice]['tipo'] = $e['tipo'];
         }
+        if (isset($e['expresion'])) {
+            $expresion = formulaValida($e['expresion']);
+            if ($expresion === null) {
+                return fallaIa('La fórmula usa una función desconocida. Funciones: ' . implode(', ', FUNCIONES_FORMULA) . '.');
+            }
+            $columnas[$indice]['expresion'] = $expresion;
+        }
+        if (isset($e['calculo'])) {
+            if (in_array($e['calculo'], CALCULOS_COLUMNA, true)) {
+                $columnas[$indice]['calculo'] = $e['calculo'];
+            } else {
+                unset($columnas[$indice]['calculo']);
+            }
+        }
         $resumen = "Editó la propiedad «{$columnas[$indice]['nombre']}»";
     }
     db()->prepare('UPDATE paginas SET contenido = ?, version = version + 1, actualizado_en = NOW(), actualizado_por = ? WHERE id = ?')
-        ->execute([json_encode(['columnas' => array_values($columnas), 'siguiente' => (int) ($datos['siguiente'] ?? count($columnas) + 1)], JSON_UNESCAPED_UNICODE), usuarioIa(), $id]);
+        ->execute([json_encode(['columnas' => array_values($columnas), 'siguiente' => (int) ($datos['siguiente'] ?? count($columnas) + 1)] + $datos, JSON_UNESCAPED_UNICODE), usuarioIa(), $id]);
     registrarBitacora('paginas', $id, 'actualizar', 'columna', null, $resumen . ' · asistente IA');
     return exitoIa(['columnas' => array_column($columnas, 'nombre')], $resumen, $id, true);
 }
@@ -1084,7 +1118,7 @@ function descripcionHerramientaIa(string $nombre): string
         'mover_a_papelera' => 'Enviando a la papelera…', 'actualizar_filas' => 'Actualizando filas…', 'eliminar_filas' => 'Eliminando filas…',
         'editar_columna' => 'Editando la propiedad…', 'leer_paciente' => 'Leyendo el expediente…', 'registrar_paciente' => 'Registrando al paciente…',
         'actualizar_paciente' => 'Actualizando el expediente…', 'agregar_historial' => 'Agregando al historial…',
-        'buscar_en_internet' => 'Buscando en internet…', 'leer_sitio_web' => 'Leyendo el sitio…', 'insertar_imagen' => 'Agregando la imagen…',
+        'buscar_en_internet' => 'Buscando en internet…', 'leer_sitio_web' => 'Leyendo el sitio…', 'insertar_imagen' => 'Agregando la imagen…', 'ajustar_imagen' => 'Ajustando el tamaño…',
         'ver_agenda' => 'Revisando la agenda…', 'agendar_cita' => 'Agendando la cita…', 'actualizar_cita' => 'Actualizando la cita…', 'crear_grafica' => 'Dibujando la gráfica…', 'revisar_expediente' => 'Revisando el expediente…', 'editar_nota' => 'Editando la nota…', 'listar_personas' => 'Consultando al equipo…', 'enviar_aviso' => 'Enviando el aviso…', 'estadisticas_pacientes' => 'Calculando estadísticas…',
     ][$nombre] ?? 'Trabajando…';
 }

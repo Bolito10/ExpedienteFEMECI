@@ -50,13 +50,25 @@ foreach (rutaPagina($id, $usuarioId) as $p) {
 $hijos = hijosDePagina($id, $usuarioId);
 
 if ($pagina['tipo'] === 'base_datos') {
-    $filas = db()->prepare('SELECT id, valores FROM pagina_filas WHERE pagina_id = ? ORDER BY orden, id');
+    $filas = db()->prepare('SELECT id, valores, notas FROM pagina_filas WHERE pagina_id = ? ORDER BY orden, id');
     $filas->execute([$id]);
     $datosBd = [
         'columnas' => columnasDe($pagina),
-        'filas'    => array_map(fn ($f) => ['id' => (int) $f['id'], 'valores' => json_decode($f['valores'], true) ?: new stdClass()], $filas->fetchAll()),
+        'filas'    => array_map(fn ($f) => ['id' => (int) $f['id'], 'valores' => json_decode($f['valores'], true) ?: new stdClass(), 'notas' => (string) ($f['notas'] ?? '')], $filas->fetchAll()),
         'tipos'    => TIPOS_COLUMNA,
+        'vistas'   => (json_decode((string) $pagina['contenido'], true)['vistas'] ?? null) ?: [['id' => 'v1', 'tipo' => 'tabla', 'nombre' => 'Tabla']],
+        'plantillas' => array_map(fn ($p) => [$p[0], $p[1]], PLANTILLAS_BD),
+        // Columnas de tipo Paciente: nombre y folio para mostrar y elegir (solo quien puede ver expedientes)
+        'pacientes' => [],
     ];
+    if (puede('ver_expediente')) {
+        $lista = db()->prepare('SELECT id, folio, nombre, primer_apellido, segundo_apellido FROM pacientes WHERE institucion_id = ? AND eliminado_en IS NULL ORDER BY nombre, primer_apellido LIMIT 3000');
+        $lista->execute([institucionId()]);
+        foreach ($lista->fetchAll() as $x) {
+            $datosBd['pacientes'][(int) $x['id']] = [trim("{$x['nombre']} {$x['primer_apellido']} {$x['segundo_apellido']}"), $x['folio']];
+        }
+        $datosBd['pacientes'] = $datosBd['pacientes'] ?: new stdClass();
+    }
 }
 
 $tituloPagina   = $titulo;
