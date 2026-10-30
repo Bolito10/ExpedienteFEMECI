@@ -1,0 +1,122 @@
+{
+    "esquema": "femeci-perfil/1",
+    "id": "imss-carpeta-expediente",
+    "nombre": "IMSS · Identificación del derechohabiente (carpeta del expediente)",
+    "institucion": "IMSS",
+    "version": "1.0.0",
+    "vigencia": {
+        "desde": "2026-10-30",
+        "hasta": null
+    },
+    "aviso": "Basado en información pública; verifica con el layout oficial vigente. El IMSS no publica un layout de archivo para estos datos: los campos y su orden siguen la carpeta de contención 2B52-009-025 del procedimiento 2B52-003-003.",
+    "descripcion": "Datos de identificación que el IMSS registra en la carpeta del expediente clínico: NSS y agregado médico, CURP, nombre, apellidos, domicilio, UMF de adscripción, consultorio y turno.",
+    "fuentes": [
+        {
+            "titulo": "IMSS · Procedimiento 2B52-003-003 (expediente clínico en papel), definición 4.1 y anexo 1, carpeta de contención 2B52-009-025",
+            "url": "https://reposipot.imss.gob.mx/normatividad/DNMR/Procedimiento/2B52-003-003.pdf",
+            "nota": "Agregado médico de 8 caracteres: calidad (1-6), sexo (M/F), año de nacimiento y régimen (OR, ET, EC, SA, ES, SF, PE, ND). Campos de la carpeta: NSS/agregado, CURP, nombre(s), apellidos, domicilio, UMF, consultorio y turno (M o V)."
+        },
+        {
+            "titulo": "IMSS · Procedimiento 9210-003-611, definición 4.35 (Unidad de Medicina Familiar)",
+            "url": "https://www.imss.gob.mx/sites/all/statics/pdf/procedimientos/9210-003-611.pdf",
+            "nota": "La UMF asigna consultorio y turno de consulta."
+        },
+        {
+            "titulo": "IMSS · Guía de operación DISP-MAG 2009",
+            "url": "https://imss.gob.mx/sites/all/statics/pdf/formatos/GuiaOperacionDISP-MAG_2009.pdf",
+            "nota": "NSS de 10 posiciones más dígito verificador; UMF numérica de tres posiciones."
+        },
+        {
+            "titulo": "Estructura del NSS y dígito verificador (Luhn, módulo 10)",
+            "url": "https://elconta.mx/como-se-saca-integra-el-numero-del-imss/",
+            "nota": "Fuente no oficial; coincide con las bibliotecas abiertas mexa-py y francerz/mx-imss."
+        },
+        {
+            "titulo": "RENAPO · Instructivo Normativo para la asignación de la CURP (DOF 2018)",
+            "url": "https://sidof.segob.gob.mx/notas/docFuente/5526717",
+            "nota": "Posiciones 5-10 fecha de nacimiento, 11 sexo, 17 siglo."
+        }
+    ],
+    "propiedades": [
+        { "clave": "imss_nss", "nombre": "NSS", "tipo": "texto", "contenido": "nss" },
+        { "clave": "imss_agregado", "nombre": "Agregado médico", "tipo": "texto", "contenido": "agregado_medico" },
+        { "clave": "imss_umf", "nombre": "UMF", "tipo": "texto" },
+        { "clave": "imss_consultorio", "nombre": "Consultorio", "tipo": "texto" },
+        { "clave": "imss_turno", "nombre": "Turno", "tipo": "seleccion", "opciones": ["Matutino", "Vespertino"], "contenido": "turno" }
+    ],
+    "deteccion": {
+        "encabezados": ["nss", "agregado_medico", "curp", "umf", "consultorio", "turno"],
+        "minimo": 3
+    },
+    "ignorar": ["fecha_de_cierre", "vigencia_documental", "legajo_no", "numero_de_fojas", "quien_autoriza", "matricula", "firma"],
+    "duplicados": ["extra_imss_nss", "extra_imss_agregado"],
+    "catalogos": {
+        "turno": { "M": "Matutino", "V": "Vespertino", "MATUTINO": "Matutino", "VESPERTINO": "Vespertino" },
+        "turno_salida": { "Matutino": "M", "Vespertino": "V" }
+    },
+    "campos": [
+        {
+            "destino": "extra_imss_nss",
+            "encabezados": ["nss", "numero_de_seguridad_social", "no_de_seguridad_social", "num_seguridad_social", "seguridad_social", "no_afiliacion", "numero_de_afiliacion", "afiliacion"],
+            "transformar": ["nss_completo"],
+            "validar": "nss",
+            "obligatorio": true
+        },
+        {
+            "destino": "extra_imss_agregado",
+            "encabezados": ["agregado_medico", "agregado", "agr_medico"],
+            "transformar": ["sin_espacios", "mayusculas"],
+            "validar": "agregado_medico"
+        },
+        {
+            "destino": "curp",
+            "encabezados": ["curp", "c_u_r_p"],
+            "transformar": ["sin_espacios", "mayusculas"],
+            "validar": "curp"
+        },
+        { "destino": "nombre", "encabezados": ["nombre_s", "nombres", "nombre"], "transformar": ["recortar"] },
+        { "destino": "primer_apellido", "encabezados": ["apellido_paterno", "paterno", "primer_apellido"], "transformar": ["recortar"] },
+        { "destino": "segundo_apellido", "encabezados": ["apellido_materno", "materno", "segundo_apellido"], "transformar": ["recortar"] },
+        { "destino": "domicilio", "encabezados": ["domicilio", "direccion"], "transformar": ["recortar"] },
+        {
+            "destino": "fecha_nacimiento",
+            "encabezados": ["fecha_de_nacimiento", "fecha_nacimiento"],
+            "formato_fecha": ["dd/mm/aaaa", "dd/mm/aa", "ddmmaaaa"]
+        },
+        { "destino": "sexo", "encabezados": ["sexo"] },
+        {
+            "destino": "extra_imss_umf",
+            "encabezados": ["umf", "umf_adscripcion", "unidad_de_adscripcion", "unidad_medica_familiar", "unidad_de_medicina_familiar"],
+            "transformar": ["solo_digitos"],
+            "validar": "umf"
+        },
+        { "destino": "extra_imss_consultorio", "encabezados": ["consultorio", "no_consultorio", "numero_de_consultorio"], "transformar": ["recortar", "mayusculas"] },
+        { "destino": "extra_imss_turno", "encabezados": ["turno"], "catalogo": "turno" }
+    ],
+    "derivar": [
+        { "destino": "sexo", "desde": "curp", "regla": "curp_sexo" },
+        { "destino": "sexo", "desde": "extra_imss_agregado", "regla": "agregado_sexo" },
+        { "destino": "fecha_nacimiento", "desde": "curp", "regla": "curp_fecha" }
+    ],
+    "exportacion": {
+        "tipo": "delimitado",
+        "separador": ",",
+        "comillas": "necesarias",
+        "encabezados": true,
+        "codificacion": "UTF-8-BOM",
+        "fin_de_linea": "CRLF",
+        "extension": "csv",
+        "columnas": [
+            { "titulo": "NUMERO DE SEGURIDAD SOCIAL", "origen": "extra_imss_nss", "transformar": ["nss_10"] },
+            { "titulo": "AGREGADO MEDICO", "origen": "extra_imss_agregado" },
+            { "titulo": "CURP", "origen": "curp" },
+            { "titulo": "NOMBRE(S)", "origen": "nombre", "transformar": ["mayusculas"] },
+            { "titulo": "APELLIDO PATERNO", "origen": "primer_apellido", "transformar": ["mayusculas"] },
+            { "titulo": "APELLIDO MATERNO", "origen": "segundo_apellido", "transformar": ["mayusculas"] },
+            { "titulo": "DOMICILIO", "origen": "domicilio" },
+            { "titulo": "UMF", "origen": "extra_imss_umf" },
+            { "titulo": "CONSULTORIO", "origen": "extra_imss_consultorio" },
+            { "titulo": "TURNO", "origen": "extra_imss_turno", "catalogo": "turno_salida" }
+        ]
+    }
+}

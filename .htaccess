@@ -1,0 +1,7 @@
+# Expedientes Clínicos: reglas de acceso de Apache
+# Sin listados de carpetas y sin acceso directo a archivos internos (esquema, notas, registros, llaves, código de IA).
+Options -Indexes
+
+<FilesMatch "(^\.|\.(sql|md|log|bak|bin|json|lock|txt|py|bat|pt|ini|env|dist)$)">
+    Require all denied
+</FilesMatch>

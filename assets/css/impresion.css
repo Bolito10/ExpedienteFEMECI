@@ -1,0 +1,96 @@
+/* =====================================================================
+   Expediente imprimible (pacientes/imprimir.php): documento claro para papel carta.
+   Formato de referencia del usuario (encabezado de la institución, bloque de título, barras de sección,
+   ficha en dos columnas, tabla de signos, notas con firma y huella) con el azul de la app en lugar del rojo.
+   ===================================================================== */
+:root { --azul: #1f5f9e; --azul-claro: #e8f0f8; --texto: #1d1d1f; --suave: #6b6b70; --linea: #dedee3; --gris: #f4f4f6; }
+
+@page {
+  size: letter;
+  margin: 18mm 16mm 20mm;
+  @bottom-left { content: "Expediente clínico · documento confidencial"; font: 8pt Arial, Helvetica, sans-serif; color: #8a8a90; }
+  @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 8pt Arial, Helvetica, sans-serif; color: #8a8a90; }
+}
+
+* { box-sizing: border-box; }
+html { background: #e9e9ec; }
+body.impresion {
+  max-width: 216mm;
+  margin: 24px auto;
+  padding: 18mm 16mm;
+  background: #fff;
+  color: var(--texto);
+  font: 10pt/1.45 Arial, Helvetica, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.impresion__institucion { color: var(--azul); font-size: 17pt; font-weight: 700; }
+.impresion__direccion { margin-top: 2px; color: var(--suave); font-size: 9pt; }
+
+.impresion__titulo { margin: 16px 0 20px; padding: 14px 18px; border: 1px solid var(--linea); border-radius: 2px; background: var(--gris); }
+.impresion__titulo h1 { margin: 0; font-size: 13.5pt; }
+.impresion__titulo p { margin: 6px 0 0; color: var(--suave); font-size: 9pt; }
+
+.impresion__seccion {
+  margin: 20px 0 10px;
+  padding: 7px 12px;
+  background: var(--azul);
+  color: #fff;
+  font-size: 10.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  break-after: avoid;
+}
+.impresion__subtitulo { margin: 12px 0 4px; color: var(--azul); font-size: 10pt; }
+.impresion__vacio { margin: 4px 0; color: var(--suave); font-style: italic; }
+p { margin: 4px 0; }
+
+/* Ficha en dos columnas */
+.impresion__ficha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 28px; margin: 0; }
+.impresion__ficha > div { display: grid; grid-template-columns: 160px 1fr; gap: 8px; }
+.impresion__ficha dt { color: var(--suave); }
+.impresion__ficha dd { margin: 0; font-weight: 700; }
+.impresion__ficha-ancha { grid-column: 1 / -1; }
+
+.impresion__lista { margin: 4px 0; padding-left: 16px; }
+.impresion__lista--alerta li { color: var(--azul); font-weight: 700; }
+
+/* Signos vitales */
+.impresion__tabla { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+.impresion__tabla th { padding: 4px 6px; background: var(--gris); color: var(--suave); font-weight: 700; text-align: center; }
+.impresion__tabla td { padding: 3px 6px; text-align: center; }
+.impresion__tabla tbody tr:nth-child(even) td { background: #fafafb; }
+.impresion__tabla thead { display: table-header-group; }
+.impresion__tabla tr { break-inside: avoid; }
+
+/* Notas, recetas y demás registros */
+.impresion__registro { padding-bottom: 10px; border-bottom: 1px solid var(--linea); margin-bottom: 12px; }
+.impresion__registro-cabecera { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; background: var(--gris); break-after: avoid; }
+.impresion__registro-cabecera span { color: var(--suave); font-size: 9pt; white-space: nowrap; }
+.impresion__autor { color: var(--suave); font-size: 8.5pt; }
+.impresion__firma { margin-top: 8px; color: var(--suave); font-size: 8pt; }
+.impresion__receta { margin: 6px 0; padding-left: 18px; }
+.impresion__indicaciones { color: var(--suave); font-style: italic; }
+
+/* Detalle de los registros (componente historial_detalle.php en modo documento) */
+.impresion .detalle-clinico__bloque { margin: 8px 0 0; break-inside: avoid; }
+.impresion .detalle-clinico__titulo { margin: 0 0 2px; color: var(--suave); font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.impresion .detalle-clinico__texto { margin: 0; }
+.impresion .detalle-clinico__datos, .impresion .detalle-clinico__signos { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 0; }
+.impresion .detalle-clinico__datos > div, .impresion .detalle-clinico__signos > div { display: flex; gap: 4px; }
+.impresion .detalle-clinico__datos dt, .impresion .detalle-clinico__signos dt { color: var(--suave); }
+.impresion .detalle-clinico__datos dd, .impresion .detalle-clinico__signos dd { margin: 0; }
+.impresion .detalle-clinico ul { margin: 2px 0; padding-left: 16px; }
+.impresion svg { display: none; }
+
+.impresion__legal { margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--linea); color: var(--suave); font-size: 8pt; }
+.impresion__legal h2 { margin: 0 0 4px; color: var(--texto); font-size: 9pt; }
+
+/* En pantalla se ve como una hoja; al imprimir ocupa la página completa */
+@media print {
+  html { background: #fff; }
+  body.impresion { max-width: none; margin: 0; padding: 0; }
+}
+.impresion__registro + .impresion__legal { margin-top: 12px; padding-top: 0; border-top: 0; }

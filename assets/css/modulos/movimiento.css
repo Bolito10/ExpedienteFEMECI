@@ -1,0 +1,69 @@
+/* ==========================================================================
+   Movimiento de la app: transición entre páginas, barra de carga, entradas escalonadas,
+   aparición al desplazarse, números que cuentan y respuesta al tocar. Todo corto (≤ 500 ms),
+   con curvas suaves, y sin movimiento cuando el sistema pide «reducir movimiento».
+   ========================================================================== */
+:root {
+  --curva-salida: cubic-bezier(.16, 1, .3, 1);   /* rápida al inicio, se asienta suave */
+  --curva-suave: cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ---- Transición entre páginas (navegadores con View Transitions entre documentos) ----
+   La barra lateral y las pestañas se quedan quietas; solo el contenido se desliza y se funde. */
+@view-transition { navigation: auto; }
+.barra-lateral { view-transition-name: barra-lateral; }
+.pestanas { view-transition-name: pestanas; }
+::view-transition-old(root) { animation: 160ms var(--curva-suave) both vt-salir; }
+::view-transition-new(root) { animation: 320ms var(--curva-salida) both vt-entrar; }
+::view-transition-group(barra-lateral), ::view-transition-group(pestanas) { animation-duration: 0s; }
+@keyframes vt-salir  { to   { opacity: 0; transform: translateY(-4px); } }
+@keyframes vt-entrar { from { opacity: 0; transform: translateY(8px); } }
+
+/* ---- Barra de carga arriba al cambiar de página ---- */
+.barra-carga {
+  position: fixed; inset: 0 0 auto 0; z-index: 9999; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, #8b5cf6, #2383e2, #22d3ee);
+  box-shadow: 0 0 10px rgba(35, 131, 226, .7);
+  transform-origin: left; transform: scaleX(0); opacity: 0;
+}
+.barra-carga--activa { opacity: 1; animation: carga-avanza 8s cubic-bezier(.08, .8, .2, 1) forwards; }
+@keyframes carga-avanza { 0% { transform: scaleX(0); } 10% { transform: scaleX(.35); } 40% { transform: scaleX(.7); } 100% { transform: scaleX(.94); } }
+
+/* ---- Entradas escalonadas (movimiento.js pone --i a cada elemento) ---- */
+[data-entrada] { animation: entrada-escalonada 460ms var(--curva-salida) both; animation-delay: calc(var(--i, 0) * 32ms); }
+@keyframes entrada-escalonada { from { opacity: 0; transform: translateY(8px); } }
+
+/* ---- Aparición al desplazarse: las secciones lejanas esperan a verse ---- */
+.revelar { opacity: 0; transform: translateY(14px); animation: none !important; transition: opacity 560ms var(--curva-salida), transform 560ms var(--curva-salida); }
+.revelar.revelado { opacity: 1; transform: none; }
+
+/* ---- Números que cuentan: sin saltos de ancho mientras cambian ---- */
+[data-contando] { font-variant-numeric: tabular-nums; }
+
+/* ---- Respuesta al tocar: botones que se hunden y vuelven ---- */
+.boton, .boton-icono, .lateral-enlace, .pestana, .barra-acciones button, .historial__filtros button {
+  transition-property: background-color, color, border-color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: var(--curva-suave);
+}
+.boton:active:not(:disabled), .boton-icono:active:not(:disabled), .barra-acciones button:active { transform: scale(.96); }
+.boton--primario:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(35, 131, 226, .28); }
+.lateral-enlace:active { transform: scale(.985); }
+
+/* Filas de tablas y renglones de listas: se iluminan al pasar */
+.bd-tabla tbody tr, .lista-clinica a, .historial__evento { transition: background-color 160ms var(--curva-suave); }
+
+/* ---- Tarjetas emergentes y menús: aparecen desde su origen con un poco de profundidad ---- */
+.popover { box-shadow: 0 16px 48px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .04); }
+
+/* ---- Profundidad del encabezado del expediente: luz muy tenue que respira ---- */
+.hoja-paciente__resumen { position: relative; }
+.hoja-paciente__resumen > div { transition: transform 200ms var(--curva-suave); }
+.hoja-paciente__resumen > div:hover { transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  [data-entrada], .barra-carga--activa { animation: none; }
+  .revelar { opacity: 1; transform: none; transition: none; }
+  .boton:active, .boton-icono:active, .barra-acciones button:active, .lateral-enlace:active, .hoja-paciente__resumen > div:hover { transform: none; }
+}

@@ -1,0 +1,28 @@
+# Datos privados: credenciales de la base, llave de cifrado, respaldos, imágenes médicas, registros,
+# accesos de prueba. NUNCA se suben (datos de pacientes y secretos).
+/privado/
+
+# Archivos que suben los usuarios (fotos, imágenes de notas)
+/assets/subidas/*
+!/assets/subidas/.htaccess
+
+# Dependencias de PHP (se instalan con: composer install)
+/vendor/
+
+# Servicio de dictado: entorno de Python, modelos entrenados, datos generados y su token
+/ia/.venv/
+/ia/modelos/
+/ia/datos/
+/ia/token.txt
+/ia/__pycache__/
+__pycache__/
+*.pyc
+
+# Sistema y editores
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
+*.tmp
+.vscode/
+.idea/

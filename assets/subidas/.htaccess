@@ -1,0 +1,10 @@
+# Solo imagenes subidas por el sistema; nunca se ejecuta codigo aqui
+<FilesMatch "\.(php|phtml|phar|pl|py|cgi|sh)$">
+  Require all denied
+</FilesMatch>
+php_flag engine off
+
+# Las imágenes de las notas pueden tener información clínica: solo se entregan con sesión (api/paginas/imagen.php)
+<FilesMatch "^nota-[0-9a-f]{16}\.(jpg|png|webp|gif)$">
+  Require all denied
+</FilesMatch>

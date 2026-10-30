@@ -1,0 +1,85 @@
+{
+    "esquema": "femeci-perfil/1",
+    "id": "imss-control-expediente",
+    "nombre": "IMSS · Registro de control del expediente clínico",
+    "institucion": "IMSS",
+    "version": "1.0.0",
+    "vigencia": {
+        "desde": "2026-10-30",
+        "hasta": null
+    },
+    "aviso": "Basado en información pública; verifica con el layout oficial vigente. El procedimiento 2B52-003-003 enumera los datos del control del expediente (hoja de cálculo o sistema) pero no fija nombres de columna: se usan los nombres del procedimiento. Las columnas de ubicación, vale, memo, oficio, devolución y condición son del archivo clínico y no se importan.",
+    "descripcion": "Datos necesarios para el control del expediente clínico: fecha de apertura (dd/mm/aa), NSS de 10 dígitos, agregado médico de 8 caracteres, nombre 1, nombre 2, apellido materno y apellido paterno.",
+    "fuentes": [
+        {
+            "titulo": "IMSS · Procedimiento 2B52-003-003, «Datos necesarios para el control del expediente clínico»",
+            "url": "https://reposipot.imss.gob.mx/normatividad/DNMR/Procedimiento/2B52-003-003.pdf",
+            "nota": "Fecha de apertura dd/mm/aa; número de seguridad social de 10 dígitos; agregado médico de 8 dígitos; nombre 1, nombre 2, apellido materno, apellido paterno; ubicación; número de vale, memo y oficio; fecha de devolución dd/mm/aa; condición."
+        },
+        {
+            "titulo": "Estructura del NSS y dígito verificador (Luhn, módulo 10)",
+            "url": "https://elconta.mx/como-se-saca-integra-el-numero-del-imss/",
+            "nota": "Fuente no oficial; coincide con las bibliotecas abiertas mexa-py y francerz/mx-imss."
+        }
+    ],
+    "propiedades": [
+        { "clave": "imss_nss", "nombre": "NSS", "tipo": "texto", "contenido": "nss" },
+        { "clave": "imss_agregado", "nombre": "Agregado médico", "tipo": "texto", "contenido": "agregado_medico" }
+    ],
+    "deteccion": {
+        "encabezados": ["fecha_de_apertura", "numero_de_seguridad_social", "agregado_medico", "nombre_1", "nombre_2", "ubicacion", "numero_de_vale"],
+        "minimo": 4
+    },
+    "ignorar": ["fecha_de_apertura", "fecha_apertura", "ubicacion", "ubicacion_en_la_seccion", "numero_de_vale", "numero_de_memo", "numero_de_oficio", "fecha_de_devolucion", "condicion"],
+    "duplicados": ["extra_imss_nss", "extra_imss_agregado"],
+    "catalogos": {},
+    "campos": [
+        {
+            "destino": "extra_imss_nss",
+            "encabezados": ["numero_de_seguridad_social", "nss", "no_de_seguridad_social"],
+            "transformar": ["nss_completo"],
+            "validar": "nss",
+            "obligatorio": true
+        },
+        {
+            "destino": "extra_imss_agregado",
+            "encabezados": ["agregado_medico", "agregado"],
+            "transformar": ["sin_espacios", "mayusculas"],
+            "validar": "agregado_medico",
+            "obligatorio": true
+        },
+        { "destino": "nombre", "encabezados": ["nombre_1", "nombre1", "primer_nombre"], "transformar": ["recortar"] },
+        { "destino": "nombre", "encabezados": ["nombre_2", "nombre2", "segundo_nombre"], "transformar": ["recortar"] },
+        { "destino": "primer_apellido", "encabezados": ["apellido_paterno", "paterno"], "transformar": ["recortar"] },
+        { "destino": "segundo_apellido", "encabezados": ["apellido_materno", "materno"], "transformar": ["recortar"] },
+        {
+            "destino": "fecha_nacimiento",
+            "encabezados": ["fecha_de_nacimiento", "fecha_nacimiento"],
+            "formato_fecha": ["dd/mm/aaaa", "dd/mm/aa"]
+        },
+        { "destino": "curp", "encabezados": ["curp"], "transformar": ["sin_espacios", "mayusculas"], "validar": "curp" }
+    ],
+    "derivar": [
+        { "destino": "sexo", "desde": "extra_imss_agregado", "regla": "agregado_sexo" },
+        { "destino": "sexo", "desde": "curp", "regla": "curp_sexo" },
+        { "destino": "fecha_nacimiento", "desde": "curp", "regla": "curp_fecha" }
+    ],
+    "exportacion": {
+        "tipo": "delimitado",
+        "separador": ",",
+        "comillas": "necesarias",
+        "encabezados": true,
+        "codificacion": "UTF-8-BOM",
+        "fin_de_linea": "CRLF",
+        "extension": "csv",
+        "columnas": [
+            { "titulo": "FECHA DE APERTURA", "origen": "creado_en", "formato_fecha": "dd/mm/aa" },
+            { "titulo": "NUMERO DE SEGURIDAD SOCIAL", "origen": "extra_imss_nss", "transformar": ["nss_10"] },
+            { "titulo": "AGREGADO MEDICO", "origen": "extra_imss_agregado" },
+            { "titulo": "NOMBRE 1", "origen": "nombre", "transformar": ["primera_palabra", "mayusculas"] },
+            { "titulo": "NOMBRE 2", "origen": "nombre", "transformar": ["sin_primera_palabra", "mayusculas"] },
+            { "titulo": "APELLIDO MATERNO", "origen": "segundo_apellido", "transformar": ["mayusculas"] },
+            { "titulo": "APELLIDO PATERNO", "origen": "primer_apellido", "transformar": ["mayusculas"] }
+        ]
+    }
+}

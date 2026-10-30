@@ -1,0 +1,34 @@
+/* Estados visuales del panel de razonamiento.
+   El texto conserva la familia UA del botón (Arial), 14 px y peso 500.
+   El brillo se desplaza sobre los glifos mediante un gradiente recortado al texto. */
+.trShimmer,
+.trActiveSentence {
+  color: transparent;
+  background-image: linear-gradient(
+    110deg,
+    #a3a3a3 0%,
+    #a3a3a3 38%,
+    #ffffff 50%,
+    #a3a3a3 62%,
+    #a3a3a3 100%
+  );
+  background-size: 240% 100%;
+  background-position: 120% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: tr-shimmer-sweep 1.8s cubic-bezier(.22,.61,.36,1) infinite;
+}
+
+@keyframes tr-shimmer-sweep {
+  0% { background-position: 120% 0; }
+  58%, 100% { background-position: -20% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trShimmer,
+  .trActiveSentence {
+    animation: none;
+    color: #a3a3a3;
+    background-image: none;
+  }
+}

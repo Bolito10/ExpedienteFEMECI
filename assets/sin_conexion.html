@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sin conexión · Expedientes Clínicos</title>
+  <!-- La sirve sw.js cuando el servidor no responde; %BASE% se reemplaza por la ruta de la app -->
+  <link rel="stylesheet" href="%BASE%/assets/css/estilos.css">
+  <link rel="stylesheet" href="%BASE%/assets/css/modulos/durabilidad.css">
+</head>
+<body class="sin-conexion-pagina">
+  <main class="sin-conexion-pagina__caja">
+    <span class="estado estado--pendiente"><i aria-hidden="true"></i>Sin conexión</span>
+    <h1 class="pagina__titulo">No se pudo llegar al servidor</h1>
+    <p class="pagina__subtitulo">El expediente funciona en la red de la clínica. Revisa que este equipo siga conectado y que el servidor esté encendido. Lo que ya se guardó no se perdió.</p>
+    <a class="boton boton--primario" href="">Reintentar</a>
+  </main>
+</body>
+</html>

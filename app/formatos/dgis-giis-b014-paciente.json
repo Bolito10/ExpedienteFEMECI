@@ -1,0 +1,112 @@
+{
+    "esquema": "femeci-perfil/1",
+    "id": "dgis-giis-b014-paciente",
+    "nombre": "DGIS · GIIS-B014 datos del paciente (urgencias)",
+    "institucion": "Secretaría de Salud (DGIS)",
+    "version": "1.0.0",
+    "vigencia": {
+        "desde": "2026-01-16",
+        "hasta": null
+    },
+    "aviso": "Basado en información pública; verifica con el layout oficial vigente. Solo cubre las variables de identificación del paciente de la guía GIIS-B014-03-07: una carga completa a la DGIS exige todas las variables de la guía y el cifrado de su módulo.",
+    "descripcion": "Archivo de texto ANSI separado por barra vertical, con encabezado de nombres de variable. Fechas dd/mm/aaaa, sexo y entidad con los catálogos de la DGIS; valores genéricos para lo que no se conoce.",
+    "fuentes": [
+        {
+            "titulo": "DGIS · Guía y formatos para el intercambio de información en salud: urgencias médicas, GIIS-B014-03-07 (versión 3.7, 16 de enero de 2026)",
+            "url": "https://gobi.salud.gob.mx/gobi/guias/egresos_urgencias_lesiones/urgencias/GIIS-B014-03-07.pdf?v=2026.02.05",
+            "nota": "Variables clues, folio, curpPaciente (genérica XXXX999999XXXXXX99), nombre, primerApellido y segundoApellido (XX si no hay), fechaNacimiento dd/mm/aaaa (09/09/9999 si se desconoce), paisOrigen, entidadNacimiento, sexoCURP, sexo (1 hombre, 2 mujer, 3 intersexual) y derechohabiencia (catálogo AFILIACION). Archivo TXT ANSI separado por «|» con encabezado."
+        },
+        {
+            "titulo": "DGIS · Catálogo ENTIDAD_FEDERATIVA",
+            "url": "http://gobi.salud.gob.mx/gobi/catalogos/catalogosmaestros/ENTIDAD_FEDERATIVA_201602.xlsx?v=2.1.2",
+            "nota": "Claves 01 a 32; 00 no especificado, 88 no aplica, 99 se ignora."
+        },
+        {
+            "titulo": "DGIS · Catálogo SEXO",
+            "url": "http://gobi.salud.gob.mx/gobi/catalogos/catalogosmaestros/SEXO_2021.xlsx?v=1.1.1",
+            "nota": "0 no especificado, 1 hombre, 2 mujer, 3 intersexual, 9 se ignora."
+        }
+    ],
+    "propiedades": [
+        {
+            "clave": "dgis_derechohabiencia",
+            "nombre": "Derechohabiencia",
+            "tipo": "seleccion",
+            "opciones": ["Ninguna", "IMSS", "ISSSTE", "PEMEX", "SEDENA", "SEMAR", "Otra", "ISSFAM", "OPD IMSS-Bienestar"]
+        }
+    ],
+    "deteccion": {
+        "encabezados": ["curp_paciente", "primer_apellido", "segundo_apellido", "fecha_nacimiento", "sexo_curp", "entidad_nacimiento", "pais_origen", "clues"],
+        "minimo": 4
+    },
+    "ignorar": ["clues", "folio", "pais_origen", "sexo_curp", "gratuidad"],
+    "duplicados": [],
+    "catalogos": {
+        "entidad": {
+            "01": "AS", "02": "BC", "03": "BS", "04": "CC", "05": "CL", "06": "CM", "07": "CS", "08": "CH",
+            "09": "DF", "10": "DG", "11": "GT", "12": "GR", "13": "HG", "14": "JC", "15": "MC", "16": "MN",
+            "17": "MS", "18": "NT", "19": "NL", "20": "OC", "21": "PL", "22": "QT", "23": "QR", "24": "SP",
+            "25": "SL", "26": "SR", "27": "TC", "28": "TS", "29": "TL", "30": "VZ", "31": "YN", "32": "ZS",
+            "88": "NE"
+        },
+        "entidad_salida": {
+            "AS": "01", "BC": "02", "BS": "03", "CC": "04", "CL": "05", "CM": "06", "CS": "07", "CH": "08",
+            "DF": "09", "DG": "10", "GT": "11", "GR": "12", "HG": "13", "JC": "14", "MC": "15", "MN": "16",
+            "MS": "17", "NT": "18", "NL": "19", "OC": "20", "PL": "21", "QT": "22", "QR": "23", "SP": "24",
+            "SL": "25", "SR": "26", "TC": "27", "TS": "28", "TL": "29", "VZ": "30", "YN": "31", "ZS": "32",
+            "NE": "88"
+        },
+        "sexo": { "1": "H", "2": "M", "3": "X" },
+        "sexo_salida": { "H": "1", "M": "2" },
+        "derechohabiencia": {
+            "1": "Ninguna", "2": "IMSS", "3": "ISSSTE", "4": "PEMEX", "5": "SEDENA", "6": "SEMAR", "8": "Otra", "11": "ISSFAM", "14": "OPD IMSS-Bienestar"
+        },
+        "derechohabiencia_salida": {
+            "Ninguna": "1", "IMSS": "2", "ISSSTE": "3", "PEMEX": "4", "SEDENA": "5", "SEMAR": "6", "Otra": "8", "ISSFAM": "11", "OPD IMSS-Bienestar": "14"
+        }
+    },
+    "campos": [
+        {
+            "destino": "curp",
+            "encabezados": ["curp_paciente", "curp"],
+            "transformar": ["sin_espacios", "mayusculas"],
+            "nulos": ["XXXX999999XXXXXX99"],
+            "validar": "curp"
+        },
+        { "destino": "nombre", "encabezados": ["nombre"], "transformar": ["recortar"] },
+        { "destino": "primer_apellido", "encabezados": ["primer_apellido"], "transformar": ["recortar"], "nulos": ["XX"] },
+        { "destino": "segundo_apellido", "encabezados": ["segundo_apellido"], "transformar": ["recortar"], "nulos": ["XX"] },
+        {
+            "destino": "fecha_nacimiento",
+            "encabezados": ["fecha_nacimiento"],
+            "formato_fecha": ["dd/mm/aaaa"],
+            "nulos": ["09/09/9999"]
+        },
+        { "destino": "entidad_nacimiento", "encabezados": ["entidad_nacimiento"], "catalogo": "entidad", "nulos": ["00", "99"] },
+        { "destino": "sexo", "encabezados": ["sexo"], "catalogo": "sexo", "nulos": ["0", "9"] },
+        { "destino": "extra_dgis_derechohabiencia", "encabezados": ["derechohabiencia"], "catalogo": "derechohabiencia", "nulos": ["0", "99"] }
+    ],
+    "derivar": [
+        { "destino": "sexo", "desde": "curp", "regla": "curp_sexo" },
+        { "destino": "fecha_nacimiento", "desde": "curp", "regla": "curp_fecha" }
+    ],
+    "exportacion": {
+        "tipo": "delimitado",
+        "separador": "|",
+        "comillas": "nunca",
+        "encabezados": true,
+        "codificacion": "Windows-1252",
+        "fin_de_linea": "CRLF",
+        "extension": "txt",
+        "columnas": [
+            { "titulo": "curpPaciente", "origen": "curp", "si_vacio": "XXXX999999XXXXXX99" },
+            { "titulo": "nombre", "origen": "nombre", "transformar": ["mayusculas", "sin_acentos"], "largo": 50 },
+            { "titulo": "primerApellido", "origen": "primer_apellido", "transformar": ["mayusculas", "sin_acentos"], "si_vacio": "XX", "largo": 50 },
+            { "titulo": "segundoApellido", "origen": "segundo_apellido", "transformar": ["mayusculas", "sin_acentos"], "si_vacio": "XX", "largo": 50 },
+            { "titulo": "fechaNacimiento", "origen": "fecha_nacimiento", "formato_fecha": "dd/mm/aaaa", "si_vacio": "09/09/9999" },
+            { "titulo": "entidadNacimiento", "origen": "entidad_nacimiento", "catalogo": "entidad_salida", "si_vacio": "00" },
+            { "titulo": "sexo", "origen": "sexo", "catalogo": "sexo_salida" },
+            { "titulo": "derechohabiencia", "origen": "extra_dgis_derechohabiencia", "catalogo": "derechohabiencia_salida", "si_vacio": "0" }
+        ]
+    }
+}

@@ -1,0 +1,164 @@
+RESUMEN DEL SISTEMA DE DICTADO POR VOZ — Expediente FEMECI
+Actualizado: 28 de octubre de 2026
+=====================================================================
+
+1. QUÉ HACE
+-----------
+El médico habla y las secciones del registro de pacientes se van llenando solas.
+TODO corre en el equipo del establecimiento: ningún audio ni texto sale a internet.
+
+  Navegador (micrófono)
+      │  audio cada 5 s (webm/opus), con sesión y token CSRF
+      ▼
+  PHP  pacientes/dictado.php  ── valida sesión, tamaño y tipo de archivo
+      │  127.0.0.1:8765 + token secreto (ia/token.txt)
+      ▼
+  Servicio local  ia/servicio.py
+      ├─ 1) Whisper "small" (faster-whisper, CPU, int8): voz → texto en español
+      └─ 2) Extractor PyTorch (BiLSTM v3) + regla de nombres: texto → campos
+      ▼
+  PHP normaliza al formato del formulario (fecha → AAAA-MM-DD, "femenino" → M,
+  "O positivo" → O+, teléfono → "55 4821 9930", CURP validada) y devuelve JSON
+      ▼
+  El formulario se llena; NUNCA sobrescribe lo que el usuario escribió a mano.
+  El audio se borra en cuanto se transcribe.
+
+Ejemplo real de la prueba de punta a punta (audio sintético en español de 27.8 s):
+  Texto de Whisper: "Paciente Roberto Salinas Mora, de 52 años. Nació el 14 de febrero de 1972.
+                     Es alérgico a la penicilina y padece hipertensión arterial. Toma losartán.
+                     Viene por dolor de cabeza desde ayer. Su teléfono es 5548119930.
+                     Vive en Cuernavaca, Morelos."
+  Campos llenados (10): nombre, apellido paterno, apellido materno, fecha de nacimiento,
+                        alergias, padecimientos, medicamentos, motivo, municipio/estado, teléfono.
+  Whisper tardó 2.6 s en transcribir 27.8 s de audio (≈10 veces más rápido que tiempo real).
+
+
+2. VOZ A TEXTO: WHISPER
+-----------------------
+Modelo ........... Whisper "small" (OpenAI, código abierto) vía faster-whisper 1.x / CTranslate2
+Ejecución ........ CPU, cuantizado int8, todos los núcleos (16 hilos en este equipo)
+Idioma ........... español, con filtro de silencios (VAD)
+Prompt inicial ... vocabulario clínico (paciente, CURP, alergias…) y medicamentos frecuentes;
+                   sin él, "toma losartán" salía como "Tómalo Sartán".
+Tamaño ........... ~480 MB (se descargó una vez desde Hugging Face y queda en caché local)
+Cambiar modelo ... variable de entorno FEMECI_WHISPER = tiny | base | small | medium
+                   (medium es más preciso pero ~3 veces más lento).
+
+
+3. TEXTO A CAMPOS: EXTRACTOR PyTorch
+------------------------------------
+Tarea:        Clasificación de tokens (etiquetas BIO) — a qué campo pertenece cada palabra.
+Arquitectura: embedding de palabra (100) + CNN de caracteres (30 → 50 filtros)
+              → BiLSTM 2 capas (128 por dirección) → capa lineal → etiqueta.
+Parámetros:   1,522,514
+Entrenamiento: Adam (0.002), lote 32, 8 épocas, abandono 0.3, abandono de palabra 0.1,
+              recorte de gradiente 5.0, semilla 2026. ~6.5 min en CPU.
+Regla posterior (convención mexicana de nombres): el modelo ubica bien el nombre completo,
+  pero con tres palabras no siempre distingue nombre/apellidos. La regla reparte:
+  2 palabras → nombre + paterno · 3 → nombre + paterno + materno (salvo nombre compuesto
+  conocido, p. ej. "maría elena") · 4+ → los dos últimos son apellidos.
+
+Campos (17): nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, CURP,
+teléfono, correo, domicilio, municipio/estado, contacto de emergencia, teléfono de
+emergencia, alergias, grupo sanguíneo, padecimientos, medicamentos, motivo de consulta.
+
+
+4. DATOS DE ENTRENAMIENTO (SINTÉTICOS)
+--------------------------------------
+No existen dictados reales disponibles y serían datos sensibles (LFPDPPP). Por eso el
+corpus se genera con plantillas y catálogos (ia/generar_datos.py). Vive solo en ia/datos/;
+nunca entra a la base de datos del expediente ni se muestra como paciente.
+
+Versión actual del generador:
+  - 12,000 frases de entrenamiento, 1,000 de validación, 1,000 de prueba.
+  - La prueba usa nombres y apellidos que el modelo NUNCA vio.
+  - Muchas formas de presentar al paciente: "paciente", "recibo a", "atiendo a",
+    "se trata de la señora", "el joven", "hoy consulta", o sin palabra disparadora.
+  - Artículos ("alérgica a la…", "al…", "a las…"), conectores ("y", "además"),
+    motivos compuestos (síntoma + tiempo), domicilios con avenida y comas.
+  - Mitad con el estilo de Whisper (mayúsculas, puntuación, "CURP" en mayúsculas),
+    mitad en minúsculas sin puntuación.
+
+
+5. CÓMO SE MIDIÓ (honestamente)
+-------------------------------
+Además de la prueba sintética, hay tres conjuntos de dictados redactados a mano con frases
+distintas a las plantillas, evaluados campo por campo (ia/evaluar_dictados.py):
+  A — 10 dictados (47 campos), escritos con la primera versión.
+  B — 12 dictados (52 campos), escritos ANTES de mejorar el generador, estilo Whisper.
+  C — 12 dictados (51 campos), escritos DESPUÉS de reentrenar y ANTES de ver resultados.
+Nota: la regla de nombres se diseñó después de ver los errores de los tres conjuntos; es una
+convención general, no un ajuste a frases concretas, pero C deja de ser 100 % "a ciegas".
+
+
+6. RESULTADOS (reales, de cada versión)
+---------------------------------------
+                         Prueba sintética   Conj. A     Conj. B     Conj. C     Total A+B+C
+                         (F1 entidades)     (47)        (52)        (51)        (150)
+  v1 (plantillas simples)     0.9905        66.0 %      61.5 %        —            —
+  v2 (generador nuevo)        0.9183        85.1 %      92.3 %      92.2 %      89.3 %
+  v3 (+ proporciones, CURP)   0.9385        85.1 %      94.2 %      88.2 %      89.3 %
+  v3 + regla de nombres         —           89.4 %     100.0 %     100.0 %      96.7 %   ← EN USO
+  v4 (+ teléfonos sin agrupar) 0.9536       78.7 %      98.1 %      96.1 %      91.3 %   descartado
+
+  - La prueba sintética BAJÓ de v1 a v2 porque el generador nuevo es mucho más difícil
+    (nombres sin palabra disparadora); v1 solo había aprendido las plantillas.
+  - v4 mejoró los teléfonos pero empezó a tomar saludos ("buenas tardes") como nombres;
+    se descartó. El caso del teléfono dictado sin pausas se resuelve en PHP: si el modelo
+    marca como CURP un número de 10 dígitos, se usa como teléfono.
+
+Errores que todavía ocurren (v3 + regla):
+  - Nombre a media frase tras otra información ("…el paciente es iker fonseca correo…").
+  - "paciente femenina de 30 años, irene blanco solís": toma "blanco" como nombre.
+  - Errores de oído de Whisper en números (p. ej. "4821" → "4811").
+  Por eso el sistema pide revisar los campos antes de guardar.
+
+
+7. ARCHIVOS
+-----------
+ia/servicio.py           Servicio local (Whisper + extractor), solo 127.0.0.1:8765.
+ia/iniciar_servicio.bat  Doble clic para iniciarlo; debe quedar abierto mientras se dicta.
+ia/token.txt             Token secreto entre PHP y el servicio (se crea solo).
+ia/generar_datos.py      Genera el corpus sintético.
+ia/modelo.py             Arquitectura BiLSTM + CNN de caracteres.
+ia/entrenar.py           Entrena y evalúa; guarda el mejor modelo.
+ia/predecir.py           Texto → campos (incluye la regla de nombres).
+ia/evaluar_dictados.py   Conjuntos A, B y C de dictados escritos a mano.
+ia/modelos/extractor.pt  Modelo EN USO (= extractor_v3.pt).
+ia/modelos/extractor_v2.pt, extractor_v3.pt, extractor_v4.pt   Versiones guardadas.
+ia/modelos/metricas_v2.json, metricas_v4.json, robustez_*.json  Métricas de cada versión.
+ia/.venv/                Python 3.11 + PyTorch 2.15 (CPU) + faster-whisper.
+ia/.htaccess             Bloquea el acceso web a toda la carpeta ia/.
+
+pacientes/dictado.php            Recibe el audio y lo reenvía al servicio local.
+pacientes/dictado_calificar.php  Guarda 👍/👎 (solo si fue útil, duración y nº de campos;
+                                 nunca texto ni datos del paciente).
+includes/dictado.php             Barra flotante y panel del transcriptor.
+
+
+8. CÓMO USARLO
+--------------
+1) Iniciar XAMPP (Apache y MySQL).
+2) Doble clic en ia\iniciar_servicio.bat  (tarda ~45 s en cargar Whisper; dejarlo abierto).
+3) Abrir http://localhost/ExpedienteFEMECI/ → Registrar paciente → botón del micrófono
+   (o Alt + Shift + D). Hablar con naturalidad; los campos se llenan mientras se dicta.
+4) Revisar los campos y guardar.
+
+El micrófono solo funciona en localhost o con HTTPS (regla de los navegadores). Para usarlo
+desde otras computadoras de la red hay que configurar HTTPS en Apache.
+
+Reentrenar:
+  cd ia
+  .venv\Scripts\python generar_datos.py
+  .venv\Scripts\python entrenar.py
+  .venv\Scripts\python evaluar_dictados.py
+
+
+9. SIGUIENTES PASOS RECOMENDADOS
+--------------------------------
+1. Probar con dictados reales en español de México (la prueba usó voz sintética de España).
+2. Con consentimiento del paciente y anonimizando, usar los dictados que el médico corrige
+   como datos de entrenamiento reales: es la mejora más grande posible.
+3. Añadir una capa CRF para etiquetas más coherentes, o ajustar un modelo de lenguaje en
+   español ya entrenado (BETO / RoBERTa-BNE) con estos datos.
+4. Whisper "medium" si hay GPU disponible: más preciso con números y nombres.

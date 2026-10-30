@@ -1,0 +1,146 @@
+/* =====================================================================
+   Registros clínicos (NOM-004): formulario completo pacientes/nuevo_registro.php,
+   detalle de cualquier entrada (app/vistas/historial_detalle.php) y documento imprimible
+   (pacientes/evento.php). Mismo lenguaje que el registro de pacientes: secciones con icono
+   relleno, campos de línea, sin tarjetas ni sombras.
+   ===================================================================== */
+
+/* ---------- Cabecera: paciente y norma ---------- */
+.registro-clinico__paciente { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 6px 0 0; color: #a3a3a3; font-size: .9375rem; }
+.registro-clinico__paciente span + span::before { content: "·"; margin: 0 10px; color: #555; }
+.registro-clinico__alergias { color: #ffb4ab; }
+
+/* ---------- Elección del tipo: lista agrupada ---------- */
+.registro-clinico__grupo { padding: 18px 0 10px; }
+.registro-clinico__grupo-titulo { margin: 0 0 6px 8px; color: #8a8a8a; font-size: .875rem; font-weight: 500; }
+.registro-clinico__tipos-lista { margin: 0; padding: 0; list-style: none; }
+.registro-clinico__opcion { display: flex; align-items: center; gap: 14px; padding: 10px 8px; border-radius: 8px; color: inherit; text-decoration: none; transition: background 140ms ease; }
+.registro-clinico__opcion:hover { background: #191919; text-decoration: none; }
+.registro-clinico__opcion:focus-visible { outline: 0; box-shadow: inset 0 0 0 1px #4a4a4a; }
+.registro-clinico__opcion svg.ir { width: 20px; height: 20px; color: #e5e5e5; }
+.registro-clinico__opcion-texto { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
+.registro-clinico__opcion-texto b { color: #f0f0f0; font-size: .9375rem; font-weight: 500; }
+.registro-clinico__opcion-texto small { color: #8a8a8a; font-size: .875rem; line-height: 1.45; }
+.registro-clinico__norma { flex-shrink: 0; color: #6f6f6f; font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.registro-clinico__opcion > svg.icono { width: 15px; height: 15px; color: #5f5f5f; transition: transform 160ms ease, color 160ms ease; }
+.registro-clinico__opcion:hover > svg.icono { color: #a3a3a3; transform: translateX(2px); }
+
+/* ---------- Cambiar de tipo: texto simple, la opción activa subrayada ---------- */
+.registro-clinico__tipos { display: flex; gap: 18px; margin: 14px 0 0; padding: 0 0 0 8px; border-bottom: 1px solid var(--borde-fuerte); overflow-x: auto; scrollbar-width: none; }
+.registro-clinico__tipos::-webkit-scrollbar { display: none; }
+.registro-clinico__tipos a { position: relative; flex-shrink: 0; padding: 8px 0 9px; color: #8a8a8a; font-size: .875rem; text-decoration: none; white-space: nowrap; transition: color 140ms ease; }
+.registro-clinico__tipos a:hover { color: #e5e5e5; text-decoration: none; }
+.registro-clinico__tipos a.activo { color: #fff; }
+.registro-clinico__tipos a.activo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: #fff; }
+
+/* ---------- Formulario ---------- */
+.registro-clinico.historial__form { margin: 0; animation: none; }
+.registro-clinico .seccion { padding: 18px 0 16px; }
+.registro-clinico .seccion__titulo { font-size: .875rem; }
+.registro-clinico .seccion__titulo svg.ir { width: 18px; height: 18px; }
+.registro-clinico .rejilla { gap: 12px 22px; }
+.registro-clinico .rejilla + .rejilla { margin-top: 12px; }
+.registro-clinico .campo__etiqueta { margin-bottom: 3px; font-size: .8125rem; color: var(--texto-etiqueta); }
+.registro-clinico .campo input,
+.registro-clinico .campo textarea,
+.registro-clinico .campo .selector { font-size: .875rem; }
+.registro-clinico .campo textarea { min-height: 64px; }
+.registro-clinico .campo__ayuda { font-size: .8125rem; }
+.registro-clinico .campo input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(.8); opacity: .8; cursor: pointer; }
+.registro-clinico .campo input[readonly] { color: #a3a3a3; }
+.registro-clinico__subtitulo { margin: 4px 0 6px; color: #a3a3a3; font-size: .875rem; font-weight: 500; }
+.registro-clinico__subtitulo:not(:first-child) { margin-top: 18px; }
+
+/* Renglones repetibles (medicamentos, diagnósticos) */
+.registro-clinico__filas { margin-top: 14px; }
+.registro-clinico__fila + .registro-clinico__fila { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--borde-fuerte); }
+.registro-clinico__fila-cabecera { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; color: #a3a3a3; font-size: .875rem; font-weight: 500; }
+.registro-clinico__fila--linea { display: grid; grid-template-columns: minmax(0, 1fr) 28px; align-items: end; gap: 10px; }
+.registro-clinico__fila--linea + .registro-clinico__fila--linea { margin-top: 10px; padding-top: 0; border-top: 0; }
+.registro-clinico__quitar { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: #6f6f6f; cursor: pointer; transition: background 140ms ease, color 140ms ease; }
+.registro-clinico__quitar:hover { background: #1f1f1f; color: #e5e5e5; }
+.registro-clinico__quitar:focus-visible { outline: 0; box-shadow: inset 0 0 0 1px #4a4a4a; }
+.registro-clinico__quitar svg.icono { width: 14px; height: 14px; }
+.registro-clinico__filas > [data-fila]:only-child [data-fila-quitar] { visibility: hidden; }
+.registro-clinico .historial__otro { margin: 10px 0 2px; font-size: .875rem; }
+
+.registro-clinico__casillas { margin-top: 14px; }
+.registro-clinico .casilla { font-size: .875rem; line-height: 1.45; }
+.casilla--error { color: var(--peligro); }
+.registro-clinico .pie-formulario__legal .campo__ayuda,
+.registro-clinico__casillas .campo__ayuda { display: block; margin-top: 4px; color: var(--peligro); font-size: .8125rem; }
+.registro-clinico .nota-privacidad { font-size: .8125rem; line-height: 1.45; }
+.registro-clinico .boton[disabled] { opacity: .6; cursor: progress; }
+
+/* ---------- Detalle de una entrada (acordeón del perfil) ---------- */
+.detalle-clinico { display: flex; flex-direction: column; gap: 10px; }
+.detalle-clinico__bloque { margin: 0; }
+.detalle-clinico__titulo { margin: 0 0 2px; color: #9a9a9a; font-size: .8125rem; font-weight: 500; }
+.detalle-clinico__texto { margin: 0; color: #e5e5e5; font-size: .9375rem; line-height: 1.6; overflow-wrap: anywhere; }
+.detalle-clinico__datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 24px; margin: 0; }
+.detalle-clinico__datos dt { color: #8a8a8a; font-size: .8125rem; }
+.detalle-clinico__datos dd { margin: 2px 0 0; color: #ececec; font-size: .9375rem; }
+.detalle-clinico__signos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 24px; margin: 4px 0 0; }
+.detalle-clinico__signos dt { color: #8a8a8a; font-size: .8125rem; }
+.detalle-clinico__signos dd { margin: 2px 0 0; color: #f2f2f2; font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.detalle-clinico__signos small { color: #7a7a7a; font-size: .8125rem; font-weight: 400; }
+.detalle-clinico__diagnosticos { margin: 0; padding-left: 20px; color: #e5e5e5; font-size: .9375rem; line-height: 1.6; }
+.detalle-clinico__diagnosticos li { padding: 1px 0; }
+.detalle-clinico__cie { margin-left: 10px; color: #8a8a8a; font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.detalle-clinico__medicamentos { margin: 0; padding-left: 20px; }
+.detalle-clinico__medicamentos li { padding: 4px 0; color: #e5e5e5; font-size: .9375rem; }
+.detalle-clinico__medicamentos b { color: #f5f5f5; font-weight: 600; }
+.detalle-clinico__presentacion { color: #b5b5b5; }
+.detalle-clinico__indicacion { display: block; color: #a3a3a3; }
+.detalle-clinico__bloque--alerta .detalle-clinico__texto { color: #ffb4ab; }
+
+/* ---------- Documento a cuerpo completo (evento.php) ---------- */
+.documento__domicilio { margin: -2px 0 8px; color: #7a7a7a; font-size: .875rem; }
+.documento__fecha small { display: block; margin-top: 2px; color: #8a8a8a; font-size: .875rem; text-align: right; }
+.documento__contenido { margin-top: 30px; }
+.detalle-clinico--documento { gap: 0; }
+.detalle-clinico--documento .detalle-clinico__bloque { margin-top: 26px; }
+.detalle-clinico--documento > :first-child { margin-top: 0; }
+.detalle-clinico--documento .detalle-clinico__titulo { margin: 0 0 8px; color: #9a9a9a; font-size: .875rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.detalle-clinico--documento .detalle-clinico__texto { font-size: 1.0625rem; line-height: 1.7; }
+.detalle-clinico--documento .detalle-clinico__datos { gap: 16px 24px; margin-top: 26px; padding-bottom: 22px; border-bottom: 1px solid #222; }
+.detalle-clinico--documento > .detalle-clinico__datos:first-child { margin-top: 0; }
+.detalle-clinico--documento .detalle-clinico__datos dt { font-size: .875rem; }
+.detalle-clinico--documento .detalle-clinico__datos dd { margin-top: 4px; font-size: 1rem; }
+.detalle-clinico--documento .detalle-clinico__signos { gap: 14px 24px; margin-top: 0; }
+.detalle-clinico--documento .detalle-clinico__signos dt { font-size: .875rem; }
+.detalle-clinico--documento .detalle-clinico__signos dd { font-size: 1.25rem; }
+.detalle-clinico--documento .detalle-clinico__diagnosticos { font-size: 1.0625rem; line-height: 1.7; }
+.detalle-clinico--documento .detalle-clinico__cie { font-size: .875rem; }
+.detalle-clinico--documento .detalle-clinico__medicamentos { padding-left: 22px; }
+.detalle-clinico--documento .detalle-clinico__medicamentos li { padding: 12px 0; border-bottom: 1px solid #222; font-size: 1.0625rem; }
+.detalle-clinico--documento .detalle-clinico__indicacion { margin-top: 2px; color: #b5b5b5; }
+
+/* Receta: bloque de quien prescribe */
+.documento__prescriptor { margin-top: 48px; padding-top: 22px; border-top: 1px solid #262626; }
+.documento__prescriptor-datos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
+.documento__prescriptor-datos dt { color: #8a8a8a; font-size: .875rem; }
+.documento__prescriptor-datos dd { margin: 4px 0 0; color: #ececec; font-size: 1rem; }
+.documento__prescriptor .documento__firma { margin-top: 56px; }
+
+/* Consentimiento: quien otorga, médico y dos testigos */
+.documento__firmas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 48px; margin-top: 72px; }
+.documento__firma-celda { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #b5b5b5; font-size: .9375rem; text-align: center; }
+.documento__firma-celda b { color: #f2f2f2; font-size: 1rem; font-weight: 600; }
+.documento__firma-celda .documento__linea { width: 100%; max-width: 260px; }
+.documento__registro { grid-column: 1 / -1; color: #6f6f6f; font-size: .8125rem; text-align: center; }
+
+@media (max-width: 760px) {
+  .registro-clinico__norma { display: none; }
+  .registro-clinico__fila--linea { grid-template-columns: minmax(0, 1fr) 28px; }
+  .documento__prescriptor-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .documento__firmas { grid-template-columns: 1fr; gap: 44px; }
+}
+
+@media print {
+  .registro-clinico__tipos { display: none !important; }
+  .detalle-clinico--documento .detalle-clinico__datos,
+  .detalle-clinico--documento .detalle-clinico__medicamentos li,
+  .documento__prescriptor { border-color: #bbb; }
+  .detalle-clinico__bloque, .documento__firmas, .documento__firma-celda, .documento__prescriptor { break-inside: avoid; }
+}

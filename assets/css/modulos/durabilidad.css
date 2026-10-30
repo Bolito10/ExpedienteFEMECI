@@ -1,0 +1,39 @@
+/* =====================================================================
+   Durabilidad: indicador "Sin conexión", aviso de borrador recuperado,
+   respaldos y página sin conexión (sw.js). Solo tokens de estilos.css.
+   ===================================================================== */
+
+/* Indicador discreto en la barra superior (usa el componente .estado) */
+.conexion { font-size: var(--fs-sm); color: var(--texto-suave); animation: conexion-entra 220ms ease-out both; }
+.conexion[hidden] { display: none; }
+.conexion i { flex-shrink: 0; }
+@keyframes conexion-entra { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+
+/* Borrador recuperado: una línea sobre el formulario */
+.aviso-borrador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0 0 18px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--borde-fuerte);
+  color: var(--texto-suave);
+  font-size: var(--fs-sm);
+  animation: conexion-entra 220ms ease-out both;
+}
+.aviso-borrador > span { flex: 1 1 260px; }
+.aviso-borrador .boton { flex-shrink: 0; }
+
+/* Respaldos */
+.respaldos__suma { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+
+/* Página "Sin conexión" que sirve el service worker */
+.sin-conexion-pagina { display: grid; min-height: 100vh; margin: 0; place-items: center; background: var(--bg); color: var(--texto); }
+.sin-conexion-pagina__caja { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 520px; padding: 32px 16px; }
+.sin-conexion-pagina__caja .pagina__titulo { margin: 0; }
+.sin-conexion-pagina__caja .pagina__subtitulo { margin: 0 0 6px; line-height: 1.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .conexion, .aviso-borrador { animation: none; }
+}

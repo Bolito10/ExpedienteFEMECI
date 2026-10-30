@@ -1,0 +1,108 @@
+/* ==========================================================================
+   Expedientes Clínicos — portal del paciente (portal/, pacientes/evento.php en modo paciente)
+   Reutiliza el perfil del paciente (hoja-paciente*, lista-clinica, propiedades-paciente,
+   historial y acordeón); aquí solo van los ajustes de solo lectura y de pantallas pequeñas.
+   Las reglas del portal van bajo body.portal para no tocar el resto de la app; al final, las del
+   popover "Dar acceso al portal" del perfil (clases propias .portal-acceso*).
+   ========================================================================== */
+
+/* ---------- Barra lateral mínima: Mi expediente, Mis citas y cerrar sesión ---------- */
+.portal .portal-lateral { display: flex; flex-direction: column; gap: 1px; padding-top: 8px; }
+.portal .portal-lateral .lateral-enlace.activo { background: #2b2b2b; color: #ffffff; }
+.portal .portal-lateral .lateral-enlace.activo svg.icono { color: #ffffff; }
+.portal .barra-lateral__pie .barra-lateral__usuario { margin-top: 0; }
+
+/* ---------- Listas de solo lectura: misma rejilla que los enlaces del perfil, sin estado de hover ---------- */
+.portal .portal-cambios li > div { display: flex; align-items: flex-start; gap: 12px; padding: 9px 8px; border-radius: 8px; }
+.portal .portal-cambios time { font-variant-numeric: tabular-nums; }
+.portal .portal-citas li > div { display: flex; align-items: center; gap: 16px; padding: 10px 8px; border-radius: 8px; }
+.portal .portal-citas li:target > div { background: #191919; }
+.portal .portal-citas--pasadas .hoja-paciente__cita-fecha { color: #a3a3a3; font-weight: 500; }
+
+/* ---------- Páginas sin portada ---------- */
+.portal .portal__titulo { margin: 28px 0 0; }
+.portal .portal__sin-expediente { padding-top: 40px; }
+.portal .portal__sin-expediente .ficha__vacio { padding-left: 0; font-size: var(--fs-base); }
+
+/* ---------- Una sola columna: signos vitales y próximas citas antes que el resto ---------- */
+@media (max-width: 1180px) {
+  .portal .hoja-paciente__lado { order: -1; }
+}
+
+/* ---------- Tableta ---------- */
+@media (max-width: 900px) {
+  .portal .pagina--expediente { padding-left: 24px; padding-right: 24px; }
+  /* Resumen en tres columnas y dos renglones */
+  .portal .hoja-paciente__resumen { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .portal .hoja-paciente__resumen > div { padding: 14px 14px 14px 0; border-left: 0; }
+  .portal .hoja-paciente__resumen > div:not(:nth-child(3n+1)) { padding-left: 14px; border-left: 1px solid #222; }
+  .portal .hoja-paciente__resumen > div:nth-child(n+4) { border-top: 1px solid #222; }
+  .portal .hoja-paciente__resumen dd { white-space: nowrap; }
+}
+
+/* ---------- Teléfono (360–560 px) ---------- */
+@media (max-width: 560px) {
+  .portal .pagina { padding-left: 16px; padding-right: 16px; }
+  .portal .pagina--expediente { padding-left: 16px; padding-right: 16px; }
+  .portal .barra-superior { padding: 0 8px; }
+  .portal .migas { min-width: 0; overflow: hidden; white-space: nowrap; }
+
+  .portal .hoja-paciente { gap: 14px; margin-top: -56px; }
+  .portal .hoja-paciente__foto { width: 92px; height: 92px; border-radius: 18px; }
+  .portal .hoja-paciente__iniciales { font-size: 2.125rem; }
+  .portal .hoja-paciente__nombre { font-size: 1.5rem; overflow-wrap: anywhere; }
+  .portal .hoja-paciente__linea { font-size: .9375rem; }
+  .portal .hoja-paciente__linea span + span::before { margin: 0 7px; }
+  /* La fecha de nacimiento ya está en Identificación: así el separador nunca queda al inicio de un renglón */
+  .portal .hoja-paciente__linea span:nth-child(4) { display: none; }
+  /* Título de sección y su fuente: si no caben juntos, la fuente baja de renglón */
+  .portal .ficha__titulo-fila { flex-wrap: wrap; row-gap: 2px; }
+  .portal .ficha__titulo-fila .ficha__titulo { white-space: nowrap; }
+  .portal .ficha__titulo-fila .ficha__fuente { flex-shrink: 1; min-width: 0; }
+  .portal .hoja-paciente__alertas { flex-direction: column; gap: 8px; }
+
+  /* Resumen en dos columnas: cada par de datos alineado y sin líneas sueltas */
+  .portal .hoja-paciente__resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 24px; }
+  .portal .hoja-paciente__resumen > div { padding: 12px 12px 12px 0; }
+  .portal .hoja-paciente__resumen > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .portal .hoja-paciente__resumen > div:nth-child(even) { padding-left: 14px; border-left: 1px solid #222; }
+  .portal .hoja-paciente__resumen > div:nth-child(n+3) { border-top: 1px solid #222; }
+  .portal .hoja-paciente__resumen dd { font-size: 1.0625rem; }
+
+  /* Propiedades: la etiqueta arriba y el valor debajo, a todo lo ancho */
+  .portal .hoja-paciente__datos .propiedad-paciente,
+  .portal .propiedad-paciente { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 4px 0; }
+  .portal .propiedad-paciente dt { height: auto; padding: 4px 8px 0; font-size: .875rem; }
+  .portal .propiedad-paciente dd { min-height: 0; padding: 2px 8px 6px 34px; }
+
+  .portal .hoja-paciente__lado .signos { gap: 12px 14px; }
+  .portal .hoja-paciente__citas a, .portal .portal-citas li > div { align-items: flex-start; gap: 12px; }
+  .portal .hoja-paciente__cita-fecha,
+  .portal .hoja-paciente__lado .hoja-paciente__cita-fecha { width: 104px; font-size: .875rem; }
+  .portal .portal-citas .hoja-paciente__cita-fecha { width: 112px; }
+
+  .portal .historial__filtros { flex-wrap: nowrap; gap: 16px; margin-left: 0; overflow-x: auto; scrollbar-width: none; }
+  .portal .historial__filtros::-webkit-scrollbar { display: none; }
+  .portal .historial__filtros button { flex-shrink: 0; }
+  .portal .acordeon { padding: 4px; border-radius: 16px; }
+  .portal .historial__pie-evento { flex-direction: column; align-items: flex-start; }
+  .portal .hoja-paciente__registro { margin-left: 0; }
+
+  /* Documento completo de un registro */
+  .portal .documento { padding: 22px 16px; }
+  .portal .documento__cabecera { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .portal .documento__fecha small { display: inline; margin: 0 0 0 8px; text-align: left; }
+  .portal .documento__paciente { grid-template-columns: minmax(0, 1fr); }
+  .portal .documento__linea { width: min(260px, 100%); }
+  .portal .documento__acciones { flex-wrap: wrap; }
+}
+
+@media print {
+  .portal .migas__lectura { display: none; }
+}
+
+/* ---------- Perfil del paciente (personal): "Dar acceso al portal" (assets/js/modulos/portal_acceso.js) ---------- */
+.popover--portal-acceso { width: 380px; }
+.portal-acceso__codigo { margin: 10px 16px 4px; color: #f5f5f5; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 1.625rem; font-weight: 600; letter-spacing: .12em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; user-select: all; }
+.portal-acceso__vigencia { display: flex; align-items: flex-start; gap: 8px; margin: 6px 16px 14px; color: #8a8a8a; font-size: var(--fs-sm); line-height: 1.45; }
+.portal-acceso__vigencia svg.icono { flex-shrink: 0; width: 14px; height: 14px; margin-top: 2px; }

@@ -1,0 +1,56 @@
+/* ==========================================================================
+   Notificaciones push: ajustes dentro de la bandeja de la campana (o en una página del portal).
+   Reutiliza las filas, interruptores, contadores y segmentados de los ajustes del asistente.
+   ========================================================================== */
+.popover--bandeja .bandeja { position: relative; }
+
+.push-ajustes {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background: #1b1b1b;
+  animation: aparecer 200ms ease-out both;
+}
+.push-ajustes .bandeja__cabecera { gap: 6px; padding-left: 8px; }
+.push-ajustes__cuerpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+}
+.push-ajustes .ajustes-ia__seccion { margin: 22px 0 0; font-size: .8125rem; }
+.push-ajustes .ajustes-ia__fila { padding: 10px 0; }
+.push-ajustes .ajustes-ia__etiqueta b { font-size: .875rem; }
+.push-ajustes .ajustes-ia__etiqueta small { font-size: .8125rem; }
+.push-ajustes .ajustes-ia__fila--interruptor input:disabled + .interruptor { opacity: .45; }
+.push-ajustes .ajustes-ia__fila--interruptor:has(input:disabled) { cursor: default; }
+.push-ajustes__sub[hidden] { display: none; }
+.push-ajustes .segmentado { align-self: flex-start; flex-wrap: wrap; }
+.push-ajustes .contador-ia input { width: 44px; }
+
+.push-ajustes__horas { display: flex; align-items: center; gap: 8px; }
+.push-ajustes__horas small { color: #8a8a8a; font-size: .8125rem; }
+.push-ajustes__horas .campo-ia { width: 116px; height: 32px; padding-left: 9px; }
+.push-ajustes__horas .campo-ia input { font-size: .875rem; font-variant-numeric: tabular-nums; }
+.push-ajustes__horas input::-webkit-calendar-picker-indicator { display: none; }
+
+.push-ajustes__nota { margin: 10px 0 0; color: #8a8a8a; font-size: .8125rem; }
+.push-ajustes__pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #1f1f1f;
+}
+.push-ajustes .boton--sutil:disabled { opacity: .45; cursor: default; }
+
+/* En una página (portal del paciente): sin capa ni desplazamiento propio */
+.push-ajustes--pagina { position: static; display: block; background: none; animation: none; }
+.push-ajustes--pagina .push-ajustes__cuerpo { padding: 0; overflow: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .push-ajustes { animation: none; }
+}

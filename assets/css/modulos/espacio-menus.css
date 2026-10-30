@@ -1,0 +1,197 @@
+/* ==========================================================================
+   Espacio de trabajo — menús contextuales (notas, árbol de páginas, bases de datos)
+   Se carga después de estilos.css. Afina .popover / .menu-flotante (abrirMenu en espacio.js)
+   y agrega submenús, muestras de color, colores de bloque y la búsqueda dentro de la nota.
+   ========================================================================== */
+
+/* ---------- Menú flotante ---------- */
+.popover--menu { border-color: #2e2e2e; border-radius: 10px; background: #1c1c1c; scrollbar-width: none; }
+.popover--menu::-webkit-scrollbar { width: 0; }
+.popover.cerrando, .buscador-nota.cerrando { pointer-events: none; }
+.menu-flotante { min-width: 232px; max-width: 340px; padding: 5px; }
+.menu-flotante button {
+  gap: 10px;
+  min-height: 30px;
+  padding: 4px 10px 4px 9px;
+  border-radius: 6px;
+  color: #e6e6e6;
+  font-size: .875rem;
+  line-height: 1.35;
+  transition: background 90ms ease, color 90ms ease;
+}
+.menu-flotante button:hover,
+.menu-flotante button:focus,
+.menu-flotante button:focus-visible,
+.menu-flotante button.activo,
+.menu-flotante button.abierto { background: #2a2a2a; outline: 0; }
+.menu-flotante button:disabled { opacity: .38; background: transparent; }
+.menu-flotante button.peligro { color: #ff8a80; }
+.menu-flotante button.peligro svg.icono { color: #ff8a80; }
+.menu-flotante button.peligro:hover,
+.menu-flotante button.peligro:focus { background: rgba(255, 110, 100, .12); }
+.menu-flotante svg.icono { width: 16px; height: 16px; color: #a3a3a3; }
+.menu-flotante button small { margin-left: auto; padding-left: 12px; color: #7d7d7d; font-size: .8125rem; }
+.menu-flotante button small + .menu-flotante__marca,
+.menu-flotante button small + .menu-flotante__flecha { margin-left: 6px; }
+.menu-flotante__marca { width: 15px !important; height: 15px !important; margin-left: auto; color: #e6e6e6 !important; }
+.menu-flotante__flecha { width: 14px !important; height: 14px !important; margin-left: auto; color: #7d7d7d !important; }
+.menu-flotante__titulo {
+  padding: 7px 10px 4px 9px;
+  overflow: hidden;
+  color: #8c8c8c;
+  font-size: .8125rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menu-flotante__titulo:first-child { padding-top: 5px; }
+.menu-flotante__separador { height: 1px; margin: 5px -5px; background: #2a2a2a; }
+.menu-flotante__nota { padding: 6px 10px 6px 9px; color: #7d7d7d; font-size: .8125rem; line-height: 1.45; }
+.menu-flotante__entrada {
+  width: calc(100% - 4px);
+  height: 32px;
+  margin: 2px 2px 5px;
+  padding: 0 10px;
+  border: 1px solid #343434;
+  border-radius: 6px;
+  background: #141414;
+  color: #ececec;
+  font-size: .875rem;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  color-scheme: dark;
+}
+.menu-flotante__entrada:focus { border-color: var(--primario); box-shadow: 0 0 0 3px rgba(35, 131, 226, .18); }
+.menu-flotante__entrada::placeholder { color: #6b6b6b; }
+
+/* Submenús: se abren al lado, con un deslizamiento corto */
+.popover--sub { z-index: 96; animation: submenu-abre 130ms ease-out both; }
+@keyframes submenu-abre { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+
+/* Anchos por tipo de menú */
+.menu-editor .menu-flotante, .menu-pagina .menu-flotante { min-width: 260px; }
+.menu-bdp .menu-flotante { min-width: 250px; }
+.menu-filtro .menu-flotante { width: 280px; }
+.menu-mover { width: 320px; max-height: min(460px, calc(100vh - 16px)); }
+.menu-mover .menu-flotante { max-width: none; }
+.menu-renombrar .menu-flotante { width: 300px; }
+
+/* Muestras de color ("A" con el color de texto o de fondo) */
+.menu-muestra {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #353535;
+  border-radius: 4px;
+  color: var(--color-bloque, #e6e6e6);
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.menu-flotante button > .menu-muestra { flex: 0 0 20px; overflow: visible; }
+.menu-muestra--fondo { border-color: transparent; background: var(--fondo-bloque, #2a2a2a); color: #e6e6e6; }
+
+/* ---------- Colores de bloque (paleta apagada de Notion en modo oscuro) ---------- */
+[data-color="gris"], [data-color="fondo_gris"]          { --color-bloque: #9b9b9b; --fondo-bloque: #2a2a2a; }
+[data-color="cafe"], [data-color="fondo_cafe"]          { --color-bloque: #b2876f; --fondo-bloque: #33291f; }
+[data-color="naranja"], [data-color="fondo_naranja"]    { --color-bloque: #d08a4c; --fondo-bloque: #3a2a1d; }
+[data-color="amarillo"], [data-color="fondo_amarillo"]  { --color-bloque: #cba04e; --fondo-bloque: #39301d; }
+[data-color="verde"], [data-color="fondo_verde"]        { --color-bloque: #5a9e74; --fondo-bloque: #1f2f25; }
+[data-color="azul"], [data-color="fondo_azul"]          { --color-bloque: #5b8ad3; --fondo-bloque: #1c2a3a; }
+[data-color="morado"], [data-color="fondo_morado"]      { --color-bloque: #9a72c4; --fondo-bloque: #2c2336; }
+[data-color="rosa"], [data-color="fondo_rosa"]          { --color-bloque: #c8628d; --fondo-bloque: #36222c; }
+[data-color="rojo"], [data-color="fondo_rojo"]          { --color-bloque: #d06a62; --fondo-bloque: #3a2220; }
+
+.bloque[data-color]:not([data-color^="fondo_"]) .bloque__texto,
+.bloque[data-color]:not([data-color^="fondo_"])::before { color: var(--color-bloque); }
+.bloque[data-color][data-c="1"] .bloque__texto { color: #6e6e6e; }
+.bloque[data-color^="fondo_"] { padding-right: 8px; padding-left: 8px; background: var(--fondo-bloque); }
+.bloque[data-color^="fondo_"] > .bloque__controles { left: -58px; }
+
+/* Bloque con el menú abierto, recién movido o abierto desde un enlace */
+.bloque--menu { background: rgba(35, 131, 226, .13); }
+.bloque--destacado { animation: bloque-destello 1.2s ease-out; }
+.bloque--enlazado { animation: bloque-enlace 2.6s ease-out; }
+@keyframes bloque-destello { from { background-color: rgba(35, 131, 226, .16); } }
+@keyframes bloque-enlace { 0%, 35% { background-color: rgba(202, 152, 73, .22); } }
+
+/* ---------- Buscar en la nota ---------- */
+.buscador-nota {
+  position: fixed;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 40px;
+  padding: 0 5px 0 12px;
+  border: 1px solid #2e2e2e;
+  border-radius: 10px;
+  background: #1c1c1c;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .5);
+  animation: menu-abre 140ms ease-out both;
+  transform-origin: right top;
+}
+.buscador-nota.cerrando { animation: menu-cierra 120ms ease-in forwards; }
+.buscador-nota > svg.icono { width: 16px; height: 16px; margin-right: 6px; color: #8c8c8c; }
+.buscador-nota input { width: 210px; height: 30px; padding: 0; border: 0; outline: 0; background: transparent; color: #ececec; font: inherit; font-size: .875rem; }
+.buscador-nota input::placeholder { color: #6b6b6b; }
+.buscador-nota__cuenta { min-width: 70px; padding: 0 6px; color: #8c8c8c; font-size: .8125rem; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.buscador-nota.sin-resultados .buscador-nota__cuenta { color: #ff8a80; }
+.buscador-nota button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: #a3a3a3; cursor: pointer; transition: background 90ms ease; }
+.buscador-nota button:hover:not(:disabled) { background: #2a2a2a; color: #ececec; }
+.buscador-nota button:disabled { opacity: .35; cursor: default; }
+.buscador-nota button svg.icono { width: 15px; height: 15px; }
+::highlight(busqueda-nota) { background-color: rgba(202, 152, 73, .3); }
+::highlight(busqueda-nota-actual) { background-color: #c99a45; color: #111; }
+
+/* ---------- Filas con el menú abierto (árbol, páginas dentro, tabla) ---------- */
+.arbol__fila.con-menu { background: #262626; color: #fff; }
+.arbol__fila.con-menu .arbol__acciones { display: flex; }
+.hoja__hijos li a.con-menu { background: #1f1f1f; }
+
+/* ---------- Base de datos: barra de la vista, encabezados y filas ---------- */
+.bdp__chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; margin-left: 4px; }
+.bdp__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  height: 28px;
+  padding: 0 11px 0 9px;
+  border: 1px solid #2e2e2e;
+  border-radius: 14px;
+  background: transparent;
+  color: #bdbdbd;
+  font: inherit;
+  font-size: .8125rem;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+  animation: menu-abre 140ms ease-out both;
+}
+.bdp__chip:hover, .bdp__chip[aria-expanded="true"] { border-color: #3a3a3a; background: #1e1e1e; }
+.bdp__chip svg.icono { width: 14px; height: 14px; color: #8c8c8c; }
+.bdp__chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.bdp-tabla th button > span { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bdp__orden { display: inline-grid; place-items: center; color: #7d7d7d; font-style: normal; }
+.bdp__orden svg.icono { width: 13px !important; height: 13px !important; }
+.bdp-tabla th.con-menu button, .bdp-tabla th button[aria-expanded="true"] { background: #1e1e1e; }
+.bdp-tabla tr.con-menu td { background: #171717; }
+.bdp-tabla tr.con-menu .bdp__fila-acciones button { opacity: 1; }
+.bdp-tabla .bdp__congelada { position: sticky; z-index: 2; background: var(--bg, #111); }
+.bdp-tabla thead .bdp__congelada { z-index: 3; }
+.bdp-tabla tr:hover td.bdp__congelada, .bdp-tabla tr.con-menu td.bdp__congelada { background: #171717; }
+.bdp-tabla .bdp__congelada--ultima { box-shadow: inset -1px 0 0 #3a3a3a; }
+.bdp__fila--nueva td { animation: bdp-fila-nueva 1.2s ease-out; }
+@keyframes bdp-fila-nueva { from { background-color: rgba(35, 131, 226, .14); } }
+
+/* Editor de opciones de selección (misma lista que los menús) */
+.seleccion-editor { width: 300px; padding: 5px; }
+.seleccion-editor .menu-flotante { min-width: 0; padding: 0; }
+.seleccion-editor input.menu-flotante__entrada { width: calc(100% - 4px); height: 32px; margin: 2px 2px 5px; }
+.seleccion-editor__opcion { display: flex; flex: 1; min-width: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .popover--sub, .bdp__chip, .buscador-nota, .bloque--destacado, .bloque--enlazado, .bdp__fila--nueva td { animation: none; }
+}

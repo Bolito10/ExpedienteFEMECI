@@ -1,0 +1,55 @@
+/* ==========================================================================
+   Alta de la institución e incorporación con códigos.
+   - Pasos cortos dentro de la ventana de acceso (crear cuenta, registrar clínica, usar un código):
+     mismos campos, botones y textos que el paso "correo" de acceso/index.php.
+   - Códigos de acceso en Personas y permisos (tabla y estado, sin pastillas de color).
+   ========================================================================== */
+
+/* ---------- Pasos dentro de la ventana de acceso ---------- */
+.alta { width: 100%; }
+.alta__paso[hidden] { display: none; }
+.alta__paso.entra { animation: aparecer 260ms ease-out both; }
+.alta__indicador { margin: 0 0 10px; font-size: var(--fs-xs); color: #6d6d6d; }
+.alta__campos { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 22px; }
+.alta__campos .acceso__boton { margin-top: 6px; }
+.alta__campo-error { border-color: var(--peligro) !important; }
+.alta__ayuda { margin: -2px 0 0; font-size: var(--fs-xs); color: #8c8c8c; text-align: left; }
+.alta__ayuda--error { color: var(--peligro); }
+.alta__atras { margin: 14px 0 0; font-size: var(--fs-xs); color: #8c8c8c; }
+
+/* Menú propio en lugar del select del navegador: el botón ocupa todo el campo */
+.alta__selector { position: relative; display: flex; align-items: center; padding: 0; }
+.alta__selector .selector { height: 100%; padding: 0 10px 0 12px; color: var(--texto-fuerte); font-size: inherit; }
+.alta__selector .selector__vacio { color: #8a8a8a; }
+
+/* Reglas de la contraseña: se marcan mientras se escribe */
+.alta__reglas { margin: 2px 0 0; padding: 0; list-style: none; text-align: left; }
+.alta__reglas li { display: flex; align-items: center; gap: 6px; padding: 1px 0; font-size: var(--fs-xs); color: #6d6d6d; transition: color var(--transicion); }
+.alta__reglas li svg.icono { width: 12px; height: 12px; opacity: 0; transition: opacity var(--transicion); }
+.alta__reglas li.cumple { color: #b4b4b4; }
+.alta__reglas li.cumple svg.icono { opacity: 1; }
+
+/* Código de acceso: un solo campo en grupos de 4 */
+.alta__codigo { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+
+/* Resumen de la cédula en el asistente de la clínica */
+.alta__estado { margin: 14px 0 0; font-size: var(--fs-xs); color: #8c8c8c; line-height: 1.6; }
+.alta__estado b { color: #d6d6d6; font-weight: 500; }
+
+/* ---------- Códigos de acceso en Personas y permisos ---------- */
+.codigos__codigo { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .04em; }
+.codigos__estado--vigente { color: var(--texto); }
+.codigos__estado--usado, .codigos__estado--vencido, .codigos__estado--revocado { color: var(--texto-tenue); }
+.codigos__nuevo { display: flex; flex-direction: column; gap: 10px; width: 300px; padding: 4px; }
+.codigos__fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--fs-sm); color: var(--texto-suave); }
+.codigos__fila input { width: 72px; }
+.codigos__generado { margin: 0; padding: 10px 0 2px; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 1.25rem; letter-spacing: .08em; color: var(--texto-fuerte); text-align: center; user-select: all; }
+.codigos__nota { margin: 0; font-size: var(--fs-xs); color: var(--texto-tenue); line-height: 1.5; }
+.personas__cedula-estado { display: block; font-size: var(--fs-xs); color: var(--texto-tenue); }
+button.personas__cedula-estado { padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-xs); color: var(--texto-tenue); text-align: left; cursor: pointer; }
+button.personas__cedula-estado:hover { color: var(--texto-suave); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Textos de apoyo del registro con el mismo escalado fluido que el resto del acceso (estilos.css) */
+@media (min-width: 761px) {
+  .alta__indicador, .alta__ayuda, .alta__atras, .alta__reglas li, .alta__estado { font-size: clamp(.8125rem, .9vw, .9375rem); }
+}
