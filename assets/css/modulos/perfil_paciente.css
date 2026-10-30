@@ -89,3 +89,6 @@ body.perfil-moviendo, body.perfil-moviendo * { cursor: grabbing !important; user
   .perfil-titulo { display: flex; align-items: center; }
 }
 @media (prefers-reduced-motion: reduce) { .perfil--recien-movida, .perfil-aviso { animation: none; } }
+/* El título queda a la izquierda (no centrado) junto a sus controles, y la barra fija tapa por completo lo de abajo */
+.perfil-titulo > .ficha__titulo, .perfil-titulo > .grafica__titulo { margin-right: auto; }
+@media (max-width: 760px) { .perfil-barra { background: var(--bg); backdrop-filter: none; } }

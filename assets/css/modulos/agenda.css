@@ -438,3 +438,16 @@ body:has(.pagina--agenda) .banner { height: 96px; }
 .cal-evento { line-height: 1.22; }
 .cal-evento--medio { justify-content: center; }
 .cal-evento--medio .cal-evento__motivo, .cal-evento--medio .cal-evento__fin { display: none; }
+
+/* Celular: la barra serena se acomoda en dos renglones (fecha arriba, controles abajo) y las horas
+   se desplazan dentro de su caja para que el día abra en la hora actual y no a medianoche */
+@media (max-width: 760px) {
+  .calendario--sereno .calendario__barra { flex-wrap: wrap; row-gap: 8px; }
+  .calendario--sereno .calendario__navegar { flex: 1 1 100%; }
+  .calendario--sereno .calendario__herramientas { flex: 1 1 100%; justify-content: flex-end; }
+  .calendario--sereno .cal-buscar { margin-right: auto; }
+  .calendario--sereno .cal-buscar:focus-within, .calendario--sereno .cal-buscar--activa { width: 100%; flex: 1 1 auto; }
+  .calendario--sereno .cal-buscar:focus-within ~ .cal-menu-boton, .calendario--sereno .cal-buscar--activa ~ .cal-menu-boton { display: none; }
+  .cal-tiempo__scroll { max-height: calc(100dvh - 190px); overflow-y: auto; overscroll-behavior: contain; }
+  body:has(.pagina--agenda) .banner { height: 64px; }
+}
