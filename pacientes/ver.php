@@ -591,21 +591,52 @@ require __DIR__ . '/../app/vistas/plantilla/encabezado.php';
       <?php endforeach; ?>
     </div>
 
-    <!-- Cada evento se despliega para ver su detalle; "Ver completo" lo abre como documento -->
-    <ul class="historial acordeon">
+    <!-- Herramientas: buscar dentro del historial, saltar a un año y abrir o cerrar todo -->
+    <div class="linea-tiempo__herramientas">
+      <label class="linea-tiempo__buscar"><?= icono('buscar') ?><input type="search" placeholder="Buscar en el historial (diagnóstico, medicamento, estudio…)" data-historial-buscar aria-label="Buscar en el historial"></label>
+      <?php $anios = array_values(array_unique(array_map(fn ($h) => substr($h['fecha'], 0, 4), $historial))); if (count($anios) > 1): ?>
+        <div class="linea-tiempo__anios" aria-label="Ir al año"><?php foreach ($anios as $a): ?><button type="button" data-ir-anio="<?= e($a) ?>"><?= e($a) ?></button><?php endforeach; ?></div>
+      <?php endif; ?>
+      <button type="button" class="linea-tiempo__alternar" data-historial-todo aria-pressed="false"><?= icono('expandir') ?><span>Expandir todo</span></button>
+    </div>
+
+    <!-- Línea de tiempo: por mes; cada evento con su tipo, fecha y hora, resumen y autor; se despliega para ver el detalle -->
+    <?php
+      $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      $resumenEvento = function (array $h, array $d): array {
+          $corto = fn ($t, $n = 170) => mb_strimwidth(trim(preg_replace('/\s+/u', ' ', (string) $t)), 0, $n, '…');
+          return match ($h['tipo']) {
+              'receta' => [$corto(implode(' · ', array_map(fn ($m) => trim(($m['nombre'] ?? '') . ' ' . ($m['dosis'] ?? '') . ' ' . ($m['periodicidad'] ?? '')), $d['medicamentos'] ?? []))), false],
+              'estudio' => [$corto(($d['categoria'] ?? '') . ($d['resultado'] ?? '' ? ' · ' . $d['resultado'] : '')), !empty($d['fuera_rango'])],
+              'hospitalizacion' => [$corto(implode(' · ', array_filter([$d['servicio'] ?? '', !empty($d['cama']) ? 'cama ' . $d['cama'] : '', !empty($d['egreso']) ? 'egreso ' . fechaCorta($d['egreso']) : 'internado', $d['estado_egreso'] ?? '']))), false],
+              'consentimiento' => [$corto(implode(' · ', array_filter([$d['procedimiento'] ?? '', $d['decision'] ?? '', $d['otorga'] ?? '']))), false],
+              'referencia' => [$corto(implode(' · ', array_filter([$d['destino'] ?? '', $d['diagnostico'] ?? '']))), false],
+              'interconsulta' => [$corto(implode(' · ', array_filter([$d['servicio_consultado'] ?? '', $d['diagnostico'] ?? '']))), false],
+              default => [$corto($d['diagnostico'] ?? ($d['nota'] ?? ($d['resumen'] ?? ''))), false],
+          };
+      };
+      $mesActual = '';
+    ?>
+    <ol class="historial acordeon linea-tiempo">
       <?php foreach ($historial as $h):
         $d = json_decode($h['detalle'], true) ?: [];
-        $titulo = $h['tipo'] === 'receta'
-            ? 'Receta · ' . implode(', ', array_column($d['medicamentos'] ?? [], 'nombre'))
-            : $h['titulo'];
-      ?>
-        <li class="historial__evento acordeon__item" data-tipo="<?= e($h['tipo']) ?>">
-          <button type="button" class="acordeon__cabecera" aria-expanded="false" aria-controls="evento-<?= (int) $h['id'] ?>">
-            <span class="acordeon__icono"><?= icono(TIPOS_REGISTRO[$h['tipo']]['icono'] ?? 'documento') ?></span>
-            <span class="acordeon__titulo">
-              <span><?= e($titulo) ?></span>
-              <small><?= e(nombreTipoRegistro($h['tipo'])) ?> · <?= e(fechaCorta($h['fecha'])) ?></small>
+        $titulo = $h['tipo'] === 'receta' ? 'Receta · ' . implode(', ', array_column($d['medicamentos'] ?? [], 'nombre')) : $h['titulo'];
+        [$resumen, $fueraRango] = $resumenEvento($h, $d);
+        $mes = substr($h['fecha'], 0, 7);
+        if ($mes !== $mesActual): $mesActual = $mes; ?>
+          <li class="linea-tiempo__mes" data-mes="<?= e($mes) ?>" data-anio="<?= e(substr($mes, 0, 4)) ?>"><span><?= e($meses[(int) substr($mes, 5, 2)] . ' ' . substr($mes, 0, 4)) ?></span></li>
+        <?php endif; ?>
+        <li class="historial__evento acordeon__item linea-tiempo__evento linea-tiempo--<?= e($h['tipo']) ?>" data-tipo="<?= e($h['tipo']) ?>" data-mes="<?= e($mes) ?>">
+          <span class="linea-tiempo__nodo" aria-hidden="true"><?= icono(TIPOS_REGISTRO[$h['tipo']]['icono'] ?? 'documento') ?></span>
+          <button type="button" class="acordeon__cabecera linea-tiempo__cabecera" aria-expanded="false" aria-controls="evento-<?= (int) $h['id'] ?>">
+            <span class="linea-tiempo__meta">
+              <span class="linea-tiempo__tipo"><?= e(TIPOS_REGISTRO[$h['tipo']]['corto'] ?? nombreTipoRegistro($h['tipo'])) ?></span>
+              <time datetime="<?= e(str_replace(' ', 'T', $h['fecha'])) ?>"><?= e(fechaCorta($h['fecha'])) ?> · <?= e(substr($h['fecha'], 11, 5)) ?></time>
+              <?php if ($fueraRango): ?><span class="linea-tiempo__alerta">Fuera de rango</span><?php endif; ?>
             </span>
+            <span class="linea-tiempo__titulo"><?= e($titulo) ?></span>
+            <?php if ($resumen !== ''): ?><span class="linea-tiempo__resumen"><?= e($resumen) ?></span><?php endif; ?>
+            <span class="linea-tiempo__autor"><?= e($h['autor_nombre']) ?></span>
             <?= icono('flecha_abajo', 'acordeon__chevron') ?>
           </button>
           <div class="acordeon__panel" id="evento-<?= (int) $h['id'] ?>" role="region">
@@ -619,7 +650,8 @@ require __DIR__ . '/../app/vistas/plantilla/encabezado.php';
           </div>
         </li>
       <?php endforeach; ?>
-    </ul>
+    </ol>
+    <p class="linea-tiempo__vacio" data-historial-vacio hidden>Nada coincide con la búsqueda.</p>
   <?php else: ?>
     <p class="ficha__vacio">Sin eventos. La primera consulta abre el historial.</p>
   <?php endif; ?>

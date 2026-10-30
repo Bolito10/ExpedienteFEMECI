@@ -226,5 +226,5 @@
     };
   }
 
-  window.Razonamiento = { crear: crear, icono: function (tema) { return ICONOS[tema] || ICONOS.idea; } };
+  window.Razonamiento = { crear: crear, bolita: crearBolita, icono: function (tema) { return ICONOS[tema] || ICONOS.idea; } };
 })();

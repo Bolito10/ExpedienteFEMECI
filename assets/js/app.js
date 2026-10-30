@@ -329,8 +329,8 @@ function mostrarNotificacion(tipo, texto) {
   const aviso = document.createElement('div');
   aviso.className = `notificacion notificacion--${tipo}`;
   aviso.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
-  aviso.innerHTML = '<svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span></span>';
-  aviso.querySelector('span').textContent = texto;
+  aviso.innerHTML = '<span class="notificacion__orbe" aria-hidden="true"></span><span></span>';
+  aviso.querySelector('span:last-child').textContent = texto;
   contenedor.appendChild(aviso);
   programarCierre(aviso);
 }

@@ -23,6 +23,13 @@
     document.querySelector('[data-asistente-abrir]')?.click();
     setTimeout(() => document.querySelector('[data-asistente-ajustes]')?.click(), 350);
   }));
+  // Aura de citas: encender o apagar en este navegador
+  const aura = document.querySelector('[data-aura-alternar]');
+  if (aura) {
+    const pintarAura = () => aura.setAttribute('aria-checked', String(!window.AuraCitas?.apagada()));
+    pintarAura();
+    aura.addEventListener('click', () => { window.AuraCitas?.fijar(!window.AuraCitas.apagada()); pintarAura(); });
+  }
   // Botones que borran algo: confirmación con el diálogo de la app antes de enviar el formulario
   document.querySelectorAll('.configuracion [data-confirmar]').forEach((b) => b.addEventListener('click', async (ev) => {
     if (b.dataset.confirmado) return;

@@ -92,6 +92,7 @@ require __DIR__ . '/../app/vistas/plantilla/encabezado.php';
   <?php elseif ($s === 'notificaciones'): ?>
     <h1 class="configuracion__titulo">Notificaciones</h1>
     <p class="configuracion__subtitulo">Qué avisos recibes y dónde</p>
+    <?= $fila('Aura de citas', 'Un borde de luz delgado alrededor de la pantalla cuando se acerca un paciente que te toca atender: aqua a 30 min, ámbar a 10 min y rojo cuando ya empezó o es urgente. Se guarda en este navegador.', '<button type="button" class="cal-opcion conf-interruptor" role="switch" aria-checked="true" data-aura-alternar aria-label="Aura de citas"><i class="interruptor" aria-hidden="true"></i></button>') ?>
     <div data-push-ajustes-pagina></div>
 
   <?php elseif ($s === 'clinica'): ?>
